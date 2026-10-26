@@ -1,0 +1,30 @@
+{
+  "site_url": "https://TÄYTÄ-sivusi-nimi.netlify.app",
+  "agent_key": "TÄYTÄ sama AGENT_KEY kuin Netlifyssa",
+  "interval_minutes": 5,
+
+  "cameras": [
+    {
+      "id": "etupiha",
+      "name": "Etupiha",
+      "host": "192.168.1.50",
+      "user": "TÄYTÄ kameratilin käyttäjätunnus",
+      "password": "TÄYTÄ kameratilin salasana",
+      "stream": "stream1"
+    },
+    {
+      "id": "autokatos",
+      "name": "Autokatos",
+      "host": "192.168.1.51",
+      "user": "TÄYTÄ kameratilin käyttäjätunnus",
+      "password": "TÄYTÄ kameratilin salasana",
+      "stream": "stream1"
+    }
+  ],
+
+  "caruna": {
+    "username": "TÄYTÄ Caruna Plus -sähköposti",
+    "password": "TÄYTÄ Caruna Plus -salasana"
+  },
+  "caruna_every_hours": 3
+}

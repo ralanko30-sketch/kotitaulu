@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kotitaulu</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#E4E9EB" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121C22" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-clear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></symbol>
+    <symbol id="i-partly" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.4"/><path d="M9 2.8v1.6M3 9h1.6M4.8 4.8l1.1 1.1M13.2 4.8l-1.1 1.1"/><path d="M8.5 19.5h9.2a3.6 3.6 0 0 0 .3-7.2 5 5 0 0 0-9.6 1.4 2.9 2.9 0 0 0 .1 5.8z"/></symbol>
+    <symbol id="i-cloudy" viewBox="0 0 24 24"><path d="M7 19h10.5a4 4 0 0 0 .4-8 5.6 5.6 0 0 0-10.8 1.5A3.3 3.3 0 0 0 7 19z"/></symbol>
+    <symbol id="i-rain" viewBox="0 0 24 24"><path d="M7 15h10.5a4 4 0 0 0 .4-8 5.6 5.6 0 0 0-10.8 1.5A3.3 3.3 0 0 0 7 15z"/><path d="M8.5 18l-1 2.5M12.5 18l-1 2.5M16.5 18l-1 2.5"/></symbol>
+    <symbol id="i-snow" viewBox="0 0 24 24"><path d="M7 15h10.5a4 4 0 0 0 .4-8 5.6 5.6 0 0 0-10.8 1.5A3.3 3.3 0 0 0 7 15z"/><path d="M8 19.2h.01M12 20.4h.01M16 19.2h.01"/></symbol>
+    <symbol id="i-sleet" viewBox="0 0 24 24"><path d="M7 15h10.5a4 4 0 0 0 .4-8 5.6 5.6 0 0 0-10.8 1.5A3.3 3.3 0 0 0 7 15z"/><path d="M8.5 18l-1 2.5M12 19.5h.01M16.5 18l-1 2.5"/></symbol>
+    <symbol id="i-thunder" viewBox="0 0 24 24"><path d="M7 15h10.5a4 4 0 0 0 .4-8 5.6 5.6 0 0 0-10.8 1.5A3.3 3.3 0 0 0 7 15z"/><path d="M12.5 15.5l-2 3.3h3l-2 3"/></symbol>
+    <symbol id="i-fog" viewBox="0 0 24 24"><path d="M4 9h16M6 13h12M4 17h16"/></symbol>
+  </defs>
+</svg>
+
+<main id="login" class="login" hidden>
+  <form id="login-form" class="login-form">
+    <h1>Kotitaulu</h1>
+    <label for="password">Salasana</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <button type="submit">Kirjaudu</button>
+    <p id="login-error" class="form-error" role="alert"></p>
+  </form>
+</main>
+
+<div id="app" class="app" hidden>
+  <header class="top">
+    <div class="top-date">
+      <span id="today"></span>
+    </div>
+    <div class="top-status">
+      <span id="agent-status" class="agent"></span>
+      <button id="logout" class="link-btn" type="button">Kirjaudu ulos</button>
+    </div>
+  </header>
+
+  <div id="notice" class="notice" role="status" hidden></div>
+
+  <section class="weather" aria-labelledby="weather-h">
+    <h2 id="weather-h" class="visually-hidden">Sää</h2>
+    <div id="weather" class="weather-body"><p class="loading">Haetaan säätä…</p></div>
+  </section>
+
+  <section class="side" aria-label="Auto ja sähkö">
+    <article class="panel car" aria-labelledby="car-h">
+      <h2 id="car-h">Auto</h2>
+      <div id="car"><p class="loading">Haetaan auton tietoja…</p></div>
+    </article>
+    <article class="panel energy" aria-labelledby="energy-h">
+      <h2 id="energy-h">Sähkönkulutus</h2>
+      <div id="energy"><p class="loading">Haetaan kulutusta…</p></div>
+    </article>
+  </section>
+
+  <section class="cams" aria-labelledby="cams-h">
+    <div class="section-head">
+      <h2 id="cams-h">Kamerat</h2>
+      <span id="cams-meta" class="meta"></span>
+    </div>
+    <div id="cams" class="cam-grid"><p class="loading">Haetaan kamerakuvia…</p></div>
+  </section>
+
+  <section class="panel area" aria-labelledby="area-h">
+    <div class="section-head">
+      <h2 id="area-h">Lähialue</h2>
+      <a id="situation-link" class="ext" href="https://www.tilannehuone.fi/" target="_blank" rel="noopener">Avaa Tilannehuone</a>
+    </div>
+    <div id="area"><p class="loading">Haetaan varoituksia ja liikennettä…</p></div>
+  </section>
+
+  <section class="panel news" aria-labelledby="news-h">
+    <h2 id="news-h">Uutiset</h2>
+    <div id="news"><p class="loading">Haetaan uutisia…</p></div>
+  </section>
+
+  <footer class="foot">
+    Tiedot: Ilmatieteen laitos, Fintraffic, Yle, Caruna ja Ford.
+  </footer>
+</div>
+
+<dialog id="cam-dialog" class="cam-dialog">
+  <form method="dialog"><button class="close" aria-label="Sulje">Sulje</button></form>
+  <img id="cam-dialog-img" alt="">
+  <p id="cam-dialog-cap"></p>
+</dialog>
+
+<script src="/app.js" defer></script>
+</body>
+</html>

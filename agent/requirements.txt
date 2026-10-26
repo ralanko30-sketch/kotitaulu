@@ -1,0 +1,6 @@
+requests>=2.31
+imageio-ffmpeg>=0.5
+pycaruna>=1.0.3
+beautifulsoup4>=4.12
+lxml>=5.0
+tzdata>=2024.1
