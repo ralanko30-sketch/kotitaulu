@@ -49,6 +49,7 @@ a { color: inherit; }
 button { font: inherit; color: inherit; }
 :focus-visible { outline: 3px solid var(--ice); outline-offset: 2px; border-radius: 6px; }
 [hidden] { display: none !important; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .muted { color: var(--muted); }
 .loading { color: var(--muted); margin: 0; }
 .error { color: var(--berry); margin: 0; }
@@ -324,25 +325,47 @@ body.hide-cursor, body.hide-cursor * { cursor: none !important; }
 .gym-badge { font-size: .72rem; font-weight: 700; color: var(--pine); margin-left: 8px; }
 .gym-soon { font-size: .72rem; color: var(--muted); margin-left: 8px; }
 
-/* ---------- Sisäilma (Electrolux Pure A9) ---------- */
-.air-top { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-.aq { font: 800 2.8rem/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
-.aq small { font: 600 .9rem/1 var(--text); color: var(--muted); letter-spacing: 0; margin-left: 4px; }
-.aq-label { font-weight: 700; }
+/* ---------- Ilmasto: lämpöpumppu + ilmanpuhdistin ---------- */
+.climate { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 22px; }
+.clim-col { min-width: 0; }
+.clim-col + .clim-col { border-left: 1px solid var(--line); padding-left: 22px; }
+.clim-h { font: 600 1.05rem/1.2 var(--display); color: var(--muted); margin: 0 0 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 1.9rem; }
+.clim-h .warn { font-size: .75rem; }
+.pwr { border: 1px solid var(--line); background: var(--panel-2); border-radius: 999px; padding: 3px 12px; font-size: .8rem; font-weight: 700; cursor: pointer; color: var(--muted); }
+.pwr.on { background: color-mix(in srgb, var(--amber) 22%, transparent); border-color: color-mix(in srgb, var(--amber) 55%, transparent); color: var(--amber); }
+.hp-temp { display: flex; align-items: center; gap: 10px; }
+.hp-temp button, .fan button { width: 2rem; height: 2rem; border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; font-size: 1.1rem; line-height: 1; flex: none; }
+.hp-temp button:disabled, .fan button:disabled { opacity: .35; cursor: default; }
+.hp-set b { font: 800 2.6rem/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.hp-set small { color: var(--muted); margin-left: 3px; font-weight: 600; }
+.hp-temp.off .hp-set { opacity: .45; }
+.hp-room { margin: 4px 0 8px; color: var(--muted); font-size: .88rem; }
+.hp-sel { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.hp-sel label { display: grid; gap: 2px; font-size: .78rem; color: var(--muted); }
+.hp-sel select { font: inherit; font-size: .88rem; color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 5px 6px; min-width: 0; }
+.busy { color: var(--muted); font-size: .8rem; margin: 8px 0 0; }
+.note { font-size: .78rem; margin: 6px 0 0; }
+
+.air-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.aq { font: 800 2.6rem/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.aq small { font: 600 .78rem/1 var(--text); color: var(--muted); letter-spacing: 0; margin-left: 4px; }
+.aq-label { font-weight: 700; font-size: .9rem; }
 .aq-good { color: var(--pine); }
 .aq-mod { color: var(--amber); }
 .aq-bad { color: var(--berry); }
-.air-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 14px; margin: 8px 0 10px; }
-.air-grid dt { color: var(--muted); font-size: .8rem; }
-.air-grid dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
-.air-ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.air-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; margin: 6px 0 8px; }
+.air-grid dt { color: var(--muted); font-size: .75rem; }
+.air-grid dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; font-size: .92rem; }
+.air-ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-.seg button { border: 0; background: transparent; padding: 6px 12px; cursor: pointer; font-size: .9rem; }
+.seg button { border: 0; background: transparent; padding: 5px 9px; cursor: pointer; font-size: .82rem; }
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); font-weight: 700; }
 .fan { display: inline-flex; align-items: center; gap: 6px; }
-.fan button { width: 2rem; height: 2rem; border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; font-size: 1.1rem; line-height: 1; }
-.fan button:disabled { opacity: .35; cursor: default; }
-.fan b { min-width: 3.6rem; text-align: center; font-variant-numeric: tabular-nums; }
-.air-ctrl .busy { color: var(--muted); font-size: .85rem; }
-.air .note { font-size: .78rem; margin: 6px 0 0; }
+.fan-auto { font-size: .85rem; }
+.fan b { min-width: 3.4rem; text-align: center; font-variant-numeric: tabular-nums; font-size: .88rem; }
+
+@media (max-width: 520px) {
+  .climate { grid-template-columns: 1fr; gap: 16px; }
+  .clim-col + .clim-col { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 14px; }
+}

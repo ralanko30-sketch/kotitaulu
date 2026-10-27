@@ -515,43 +515,140 @@ function renderAir() {
   const d = airData;
   if (!d) return;
   if (!d.configured) {
-    el.innerHTML = `<div class="empty"><p>Electrolux-yhteyttä ei ole vielä asetettu.</p><p class="muted">Lisää ELECTROLUX_API_KEY ja ELECTROLUX_REFRESH_TOKEN Netlifyn asetuksiin.</p></div>`;
+    el.innerHTML = `<h3 class="clim-h">Ilmanpuhdistin</h3><p class="muted">Lisää ELECTROLUX_API_KEY ja ELECTROLUX_REFRESH_TOKEN Netlifyn asetuksiin.</p>`;
     return;
   }
-  if (d.error) { el.innerHTML = `<p class="error">${esc(d.error)}</p>`; return; }
+  if (d.error) { el.innerHTML = `<h3 class="clim-h">Ilmanpuhdistin</h3><p class="error">${esc(d.error)}</p>`; return; }
   const p = d.purifier;
-  $("air-name").textContent = p.name || "";
-  $("air-name").title = `Päivitetty ${ago(d.updated)}`;
   const [cls, label] = aqClass(p.pm25);
   const off = p.mode === "PowerOff";
   const manual = p.mode === "Manual";
   const cell = (k, v) => `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`;
+  const SHORT = { Auto: "Auto", Manual: "Man.", PowerOff: "Pois" };
   el.innerHTML = `
+    <h3 class="clim-h" title="${esc(p.name)}, päivitetty ${esc(ago(d.updated))}">Ilmanpuhdistin${p.connected ? "" : ` <span class="warn">ei yhteydessä</span>`}</h3>
     <div class="air-top">
-      <span class="aq ${cls}">${num(p.pm25)}<small>µg/m³ PM2.5</small></span>
+      <span class="aq ${cls}">${num(p.pm25)}<small>PM2.5</small></span>
       <span class="aq-label ${cls}">${esc(label)}</span>
-      ${p.connected ? "" : `<span class="warn">Ei yhteydessä</span>`}
     </div>
-    <dl class="air-grid">
-      ${cell("Hiilidioksidi", p.co2 != null ? `${num(p.co2)} ppm` : "–")}
-      ${cell("Lämpötila", p.temp != null ? `${num(p.temp, 1)} °C` : "–")}
+    <dl class="air-grid" title="PM10 ${num(p.pm10)} µg/m³, TVOC ${num(p.tvoc)} ppb">
+      ${cell("CO₂", p.co2 != null ? `${num(p.co2)} ppm` : "–")}
       ${cell("Kosteus", p.humidity != null ? `${num(p.humidity)} %` : "–")}
-      ${cell("PM10", p.pm10 != null ? `${num(p.pm10)} µg/m³` : "–")}
-      ${cell("TVOC", p.tvoc != null ? `${num(p.tvoc)} ppb` : "–")}
+      ${cell("Lämpö", p.temp != null ? `${num(p.temp, 1)} °C` : "–")}
       ${cell("Suodatin", p.filterLife != null ? `${num(p.filterLife)} %` : "–")}
     </dl>
     <div class="air-ctrl">
-      <div class="seg" role="group" aria-label="Toimintatila">
-        ${["Auto", "Manual", "PowerOff"].map((m) => `<button type="button" data-air="mode" data-v="${m}" aria-pressed="${p.mode === m}" ${airBusy ? "disabled" : ""}>${esc(MODE_FI[m])}</button>`).join("")}
+      <div class="seg" role="group" aria-label="Ilmanpuhdistimen tila">
+        ${["Auto", "Manual", "PowerOff"].map((m) => `<button type="button" data-air="mode" data-v="${m}" aria-pressed="${p.mode === m}" title="${esc(MODE_FI[m])}" ${airBusy ? "disabled" : ""}>${esc(SHORT[m])}</button>`).join("")}
       </div>
-      <span class="fan" aria-label="Puhaltimen nopeus" title="${manual ? "" : "Tehoa voi säätää manuaalitilassa"}">
-        <button type="button" data-air="fan" data-v="${(p.fan || 1) - 1}" aria-label="Hitaammin" ${!manual || airBusy || (p.fan || 1) <= 1 ? "disabled" : ""}>−</button>
-        <b>${off ? "Pois" : `Teho ${num(p.fan)}`}</b>
-        <button type="button" data-air="fan" data-v="${(p.fan || 0) + 1}" aria-label="Nopeammin" ${!manual || airBusy || (p.fan || 0) >= 9 ? "disabled" : ""}>+</button>
-      </span>
-      ${airBusy ? `<span class="busy">Lähetetään…</span>` : ""}
+      ${manual ? `<span class="fan" aria-label="Puhaltimen nopeus">
+        <button type="button" data-air="fan" data-v="${(p.fan || 1) - 1}" aria-label="Hitaammin" ${airBusy || (p.fan || 1) <= 1 ? "disabled" : ""}>−</button>
+        <b>Teho ${num(p.fan)}</b>
+        <button type="button" data-air="fan" data-v="${(p.fan || 0) + 1}" aria-label="Nopeammin" ${airBusy || (p.fan || 0) >= 9 ? "disabled" : ""}>+</button>
+      </span>` : off ? "" : `<span class="muted fan-auto" title="Tehoa voi säätää manuaalitilassa">Teho ${num(p.fan)}</span>`}
     </div>
-    ${d.stale ? `<p class="muted note">Uusin haku epäonnistui, näytetään ${esc(ago(d.updated))} haettu tieto.</p>` : ""}`;
+    ${airBusy ? `<p class="busy">Lähetetään…</p>` : d.stale ? `<p class="muted note">Uusin haku epäonnistui.</p>` : ""}`;
+}
+
+// ---------------- Ilmalämpöpumppu ----------------
+let hpData = null;
+let hpTarget = null; // käyttäjän valitsema, vielä lähettämätön lämpötila
+let hpTempT = null;
+const HP_MODES = [[1, "Lämmitys"], [0, "Jäähdytys"], [4, "Automaatti"], [2, "Kuivaus"], [3, "Puhallin"], [6, "Ylläpito 8 °C"]];
+const HP_FANS = [[0, "Automaatti"], [5, "Hiljainen"], [1, "Hidas"], [2, "Keski"], [3, "Nopea"], [4, "Turbo"]];
+
+function hpPending(action) {
+  return (hpData?.pending || []).find((c) => c.action === action);
+}
+
+function renderHp() {
+  const el = $("hp");
+  const d = hpData;
+  if (!d) return;
+  const st = d.state?.state;
+  if (!d.state) {
+    el.innerHTML = `<h3 class="clim-h">Ilmalämpöpumppu</h3><p class="muted">Ei tietoja vielä. Lisää lämpöpumppu kotiagentin config.json-tiedostoon.</p>`;
+    return;
+  }
+  if (!st) {
+    el.innerHTML = `<h3 class="clim-h">${esc(d.state.name)}</h3><p class="error">${esc(d.state.error || "Ei yhteyttä laitteeseen")}</p>`;
+    return;
+  }
+  const pPow = hpPending("power"), pTemp = hpPending("temp"), pMode = hpPending("mode"), pFan = hpPending("fan");
+  const on = pPow ? pPow.value : st.on;
+  const target = hpTarget ?? (pTemp ? pTemp.value : st.target);
+  const mode = pMode ? pMode.value : st.mode;
+  const fan = pFan ? pFan.value : st.fan;
+  const waiting = (d.pending || []).length > 0 || hpTarget != null;
+  const lastFail = (d.state.executed || []).find((x) => !x.ok);
+  el.innerHTML = `
+    <h3 class="clim-h" title="Päivitetty ${esc(ago(d.state.receivedAt))}">${esc(d.state.name)}
+      <button type="button" class="pwr${on ? " on" : ""}" data-hp="power" aria-pressed="${on}">${on ? "Päällä" : "Pois"}</button></h3>
+    <div class="hp-temp${on ? "" : " off"}">
+      <button type="button" data-hp="temp" data-v="-1" aria-label="Laske lämpötilaa" ${target <= 16 ? "disabled" : ""}>−</button>
+      <span class="hp-set"><b>${num(target)}</b><small>°C</small></span>
+      <button type="button" data-hp="temp" data-v="1" aria-label="Nosta lämpötilaa" ${target >= 32 ? "disabled" : ""}>+</button>
+    </div>
+    <p class="hp-room">Huone ${st.room != null ? `${num(st.room, 1)} °C` : "–"}</p>
+    <div class="hp-sel">
+      <label><span>Tila</span><select data-hp="mode">${HP_MODES.map(([v, t]) => `<option value="${v}"${v === mode ? " selected" : ""}>${esc(t)}</option>`).join("")}</select></label>
+      <label><span>Puhallin</span><select data-hp="fan">${HP_FANS.map(([v, t]) => `<option value="${v}"${v === fan ? " selected" : ""}>${esc(t)}</option>`).join("")}</select></label>
+    </div>
+    ${waiting ? `<p class="busy">Odottaa kotikonetta, enintään noin minuutti…</p>` : lastFail ? `<p class="error note">Komento epäonnistui: ${esc(lastFail.error || "")}</p>` : ""}`;
+}
+
+async function sendHp(action, value) {
+  try {
+    const res = await fetch("/api/hp", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, value }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Virhe ${res.status}`);
+    hpData = { state: data.state, pending: data.pending };
+  } catch (e) {
+    alertNotice(`Lämpöpumpun komento ei mennyt perille: ${e.message}`);
+  }
+  renderHp();
+  scheduleHp();
+}
+
+$("hp").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button[data-hp]");
+  if (!b || !hpData?.state?.state) return;
+  if (b.dataset.hp === "power") {
+    const st = hpData.state.state;
+    const cur = hpPending("power") ? hpPending("power").value : st.on;
+    sendHp("power", !cur);
+  } else if (b.dataset.hp === "temp") {
+    const st = hpData.state.state;
+    const base = hpTarget ?? (hpPending("temp") ? hpPending("temp").value : st.target);
+    hpTarget = Math.max(16, Math.min(32, base + Number(b.dataset.v)));
+    renderHp();
+    // Odotetaan hetki, jotta useampi painallus lähtee yhtenä komentona.
+    clearTimeout(hpTempT);
+    hpTempT = setTimeout(() => { const v = hpTarget; hpTarget = null; sendHp("temp", v); }, 900);
+  }
+});
+$("hp").addEventListener("change", (ev) => {
+  const s = ev.target.closest("select[data-hp]");
+  if (s) sendHp(s.dataset.hp, Number(s.value));
+});
+
+let hpTimer = null;
+function scheduleHp() {
+  clearTimeout(hpTimer);
+  const busy = (hpData?.pending || []).length > 0;
+  hpTimer = setTimeout(loadHp, busy ? 15000 : 120000);
+}
+
+async function loadHp() {
+  try {
+    if (hpTarget == null) {
+      hpData = await api("/api/hp");
+      renderHp();
+    }
+  } catch (e) {
+    failed($("hp"), e);
+  }
+  scheduleHp();
 }
 
 async function loadAir() {
@@ -671,7 +768,7 @@ function every(fn, ms) {
 
 function refreshAll() {
   tick();
-  loadWeather(); loadCams(); loadCar(); loadArea(); loadNews(); loadGym(); loadAir();
+  loadWeather(); loadCams(); loadCar(); loadArea(); loadNews(); loadGym(); loadAir(); loadHp();
   loadEnergy.fetch = true; loadEnergy();
 }
 

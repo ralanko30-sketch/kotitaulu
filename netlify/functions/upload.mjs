@@ -1,6 +1,8 @@
-// Kotikoneen agentti lähettää tänne kamerakuvat ja sähkönkulutuksen.
+// Kotikoneen agentti lähettää tänne kamerakuvat, sähkönkulutuksen ja lämpöpumpun tilan.
+// Jokaisen vastauksen mukana palautetaan lämpöpumpun odottavat komennot.
 import { json, env, safeEqual } from "../../lib/http.mjs";
 import { store } from "../../lib/store.mjs";
+import { saveState, takeCommands } from "../../lib/heatpump.mjs";
 
 const MAX_BYTES = 4 * 1024 * 1024;
 
@@ -42,14 +44,23 @@ const handler = async (req) => {
   } else if (type === "energy-error") {
     const body = await req.json().catch(() => ({}));
     await s.setJSON("energy-error", { error: String(body.error || "").slice(0, 300), at: now });
-    await s.setJSON("heartbeat", { at: now });
-    return json({ ok: true });
+  } else if (type === "heatpump") {
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== "object") return json({ error: "Lämpöpumpun tila puuttuu" }, 400);
+    await saveState({
+      name: String(body.name || "Ilmalämpöpumppu").slice(0, 40),
+      state: body.state && typeof body.state === "object" ? body.state : null,
+      error: body.error ? String(body.error).slice(0, 200) : null,
+      executed: Array.isArray(body.executed) ? body.executed.slice(0, 10) : [],
+    });
   } else if (type !== "heartbeat") {
     return json({ error: "Tuntematon tyyppi" }, 400);
   }
 
   await s.setJSON("heartbeat", { at: now, version: req.headers.get("x-agent-version") || null });
-  return json({ ok: true });
+  // Vanhat agentit eivät käsittele komentoja, joten jono annetaan vain uusille.
+  const commands = req.headers.get("x-agent-commands") === "1" ? await takeCommands() : [];
+  return json({ ok: true, commands });
 };
 
 export default async (req, context) => {
