@@ -71,7 +71,7 @@ button { font: inherit; color: inherit; }
   display: grid; gap: var(--gap);
   padding: max(12px, env(safe-area-inset-top)) 16px 28px;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "top" "notice" "weather" "cams" "car" "energy" "gym" "area" "news";
+  grid-template-areas: "top" "notice" "weather" "cams" "air" "car" "energy" "gym" "area" "news";
 }
 .top { grid-area: top; }
 .notice { grid-area: notice; }
@@ -82,13 +82,14 @@ button { font: inherit; color: inherit; }
 .area { grid-area: area; }
 .news { grid-area: news; }
 .gym { grid-area: gym; }
+.air { grid-area: air; }
 
 /* Tabletti */
 @media (min-width: 760px) {
   .app {
     padding-inline: var(--pad);
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-areas: "top top" "notice notice" "weather weather" "cams cams" "car energy" "gym gym" "area news";
+    grid-template-areas: "top top" "notice notice" "weather weather" "cams cams" "air car" "energy gym" "area news";
   }
 }
 
@@ -104,8 +105,8 @@ button { font: inherit; color: inherit; }
       "top top top top top top top top top top top top"
       "notice notice notice notice notice notice notice notice notice notice notice notice"
       "weather weather weather weather weather cams cams cams cams cams cams cams"
-      "weather weather weather weather weather car car car energy energy energy energy"
-      "area area area area gym gym gym gym news news news news";
+      "weather weather weather weather weather car car car air air air air"
+      "area area area gym gym gym energy energy energy news news news";
   }
   .panel, .weather, .cams { min-height: 0; }
   .panel { display: flex; flex-direction: column; }
@@ -322,3 +323,26 @@ body.hide-cursor, body.hide-cursor * { cursor: none !important; }
 .gym-item.live { background: color-mix(in srgb, var(--pine) 14%, transparent); border-radius: 8px; padding-inline: 8px; margin-inline: -8px; border-bottom-color: transparent; }
 .gym-badge { font-size: .72rem; font-weight: 700; color: var(--pine); margin-left: 8px; }
 .gym-soon { font-size: .72rem; color: var(--muted); margin-left: 8px; }
+
+/* ---------- Sisäilma (Electrolux Pure A9) ---------- */
+.air-top { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.aq { font: 800 2.8rem/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.aq small { font: 600 .9rem/1 var(--text); color: var(--muted); letter-spacing: 0; margin-left: 4px; }
+.aq-label { font-weight: 700; }
+.aq-good { color: var(--pine); }
+.aq-mod { color: var(--amber); }
+.aq-bad { color: var(--berry); }
+.air-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 14px; margin: 8px 0 10px; }
+.air-grid dt { color: var(--muted); font-size: .8rem; }
+.air-grid dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.air-ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.seg button { border: 0; background: transparent; padding: 6px 12px; cursor: pointer; font-size: .9rem; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); font-weight: 700; }
+.fan { display: inline-flex; align-items: center; gap: 6px; }
+.fan button { width: 2rem; height: 2rem; border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; font-size: 1.1rem; line-height: 1; }
+.fan button:disabled { opacity: .35; cursor: default; }
+.fan b { min-width: 3.6rem; text-align: center; font-variant-numeric: tabular-nums; }
+.air-ctrl .busy { color: var(--muted); font-size: .85rem; }
+.air .note { font-size: .78rem; margin: 6px 0 0; }

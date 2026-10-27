@@ -498,6 +498,103 @@ async function loadNews() {
   }
 }
 
+// ---------------- Sisäilma ----------------
+let airData = null;
+let airBusy = false;
+const MODE_FI = { Auto: "Automaatti", Manual: "Manuaali", PowerOff: "Pois päältä" };
+
+function aqClass(pm) {
+  if (pm == null) return ["", "–"];
+  if (pm <= 10) return ["aq-good", "Hyvä"];
+  if (pm <= 25) return ["aq-mod", "Kohtalainen"];
+  return ["aq-bad", "Huono"];
+}
+
+function renderAir() {
+  const el = $("air");
+  const d = airData;
+  if (!d) return;
+  if (!d.configured) {
+    el.innerHTML = `<div class="empty"><p>Electrolux-yhteyttä ei ole vielä asetettu.</p><p class="muted">Lisää ELECTROLUX_API_KEY ja ELECTROLUX_REFRESH_TOKEN Netlifyn asetuksiin.</p></div>`;
+    return;
+  }
+  if (d.error) { el.innerHTML = `<p class="error">${esc(d.error)}</p>`; return; }
+  const p = d.purifier;
+  $("air-name").textContent = p.name || "";
+  $("air-name").title = `Päivitetty ${ago(d.updated)}`;
+  const [cls, label] = aqClass(p.pm25);
+  const off = p.mode === "PowerOff";
+  const manual = p.mode === "Manual";
+  const cell = (k, v) => `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`;
+  el.innerHTML = `
+    <div class="air-top">
+      <span class="aq ${cls}">${num(p.pm25)}<small>µg/m³ PM2.5</small></span>
+      <span class="aq-label ${cls}">${esc(label)}</span>
+      ${p.connected ? "" : `<span class="warn">Ei yhteydessä</span>`}
+    </div>
+    <dl class="air-grid">
+      ${cell("Hiilidioksidi", p.co2 != null ? `${num(p.co2)} ppm` : "–")}
+      ${cell("Lämpötila", p.temp != null ? `${num(p.temp, 1)} °C` : "–")}
+      ${cell("Kosteus", p.humidity != null ? `${num(p.humidity)} %` : "–")}
+      ${cell("PM10", p.pm10 != null ? `${num(p.pm10)} µg/m³` : "–")}
+      ${cell("TVOC", p.tvoc != null ? `${num(p.tvoc)} ppb` : "–")}
+      ${cell("Suodatin", p.filterLife != null ? `${num(p.filterLife)} %` : "–")}
+    </dl>
+    <div class="air-ctrl">
+      <div class="seg" role="group" aria-label="Toimintatila">
+        ${["Auto", "Manual", "PowerOff"].map((m) => `<button type="button" data-air="mode" data-v="${m}" aria-pressed="${p.mode === m}" ${airBusy ? "disabled" : ""}>${esc(MODE_FI[m])}</button>`).join("")}
+      </div>
+      <span class="fan" aria-label="Puhaltimen nopeus" title="${manual ? "" : "Tehoa voi säätää manuaalitilassa"}">
+        <button type="button" data-air="fan" data-v="${(p.fan || 1) - 1}" aria-label="Hitaammin" ${!manual || airBusy || (p.fan || 1) <= 1 ? "disabled" : ""}>−</button>
+        <b>${off ? "Pois" : `Teho ${num(p.fan)}`}</b>
+        <button type="button" data-air="fan" data-v="${(p.fan || 0) + 1}" aria-label="Nopeammin" ${!manual || airBusy || (p.fan || 0) >= 9 ? "disabled" : ""}>+</button>
+      </span>
+      ${airBusy ? `<span class="busy">Lähetetään…</span>` : ""}
+    </div>
+    ${d.stale ? `<p class="muted note">Uusin haku epäonnistui, näytetään ${esc(ago(d.updated))} haettu tieto.</p>` : ""}`;
+}
+
+async function loadAir() {
+  try {
+    airData = await api("/api/air");
+    renderAir();
+  } catch (e) {
+    failed($("air"), e);
+  }
+}
+
+$("air").addEventListener("click", async (ev) => {
+  const b = ev.target.closest("button[data-air]");
+  if (!b || airBusy || !airData?.purifier) return;
+  const action = b.dataset.air;
+  const value = action === "fan" ? Number(b.dataset.v) : b.dataset.v;
+  airBusy = true;
+  renderAir();
+  try {
+    const res = await fetch("/api/air", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: airData.purifier.id, action, value }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Virhe ${res.status}`);
+    airData = data;
+  } catch (e) {
+    alertNotice(`Komento ei mennyt perille: ${e.message}`);
+  } finally {
+    airBusy = false;
+    renderAir();
+  }
+});
+
+function alertNotice(text) {
+  const n = $("notice");
+  n.hidden = false;
+  n.className = "notice err";
+  n.textContent = text;
+  setTimeout(() => { n.hidden = true; }, 15000);
+}
+
 // ---------------- Ole.Fit ----------------
 let gymData = null;
 const fmtGymDay = fmt({ weekday: "long", day: "numeric", month: "numeric" });
@@ -574,7 +671,7 @@ function every(fn, ms) {
 
 function refreshAll() {
   tick();
-  loadWeather(); loadCams(); loadCar(); loadArea(); loadNews(); loadGym();
+  loadWeather(); loadCams(); loadCar(); loadArea(); loadNews(); loadGym(); loadAir();
   loadEnergy.fetch = true; loadEnergy();
 }
 
@@ -610,6 +707,7 @@ async function start() {
   every(loadCams, 60 * 1000);
   every(loadWeather, 10 * 60 * 1000);
   every(() => { loadCar(); loadArea(); loadNews(); loadEnergy.fetch = true; loadEnergy(); }, 5 * 60 * 1000);
+  every(() => { if (!airBusy) loadAir(); }, 2 * 60 * 1000);
   // Seinänäyttö: ladataan sivu kokonaan uudelleen kuuden tunnin välein, jotta uudet julkaisut tulevat käyttöön.
   setTimeout(() => location.reload(), 6 * 3600 * 1000);
 }
