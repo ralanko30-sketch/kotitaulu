@@ -4,7 +4,7 @@ import { store } from "../../lib/store.mjs";
 
 const MAX_BYTES = 4 * 1024 * 1024;
 
-export default async (req) => {
+const handler = async (req) => {
   if (req.method !== "POST") return json({ error: "Väärä metodi" }, 405);
   const key = env("AGENT_KEY");
   if (!key || key.length < 24) return json({ error: "AGENT_KEY puuttuu tai on liian lyhyt (väh. 24 merkkiä)" }, 500);
@@ -50,6 +50,15 @@ export default async (req) => {
 
   await s.setJSON("heartbeat", { at: now, version: req.headers.get("x-agent-version") || null });
   return json({ ok: true });
+};
+
+export default async (req, context) => {
+  try {
+    return await handler(req, context);
+  } catch (e) {
+    console.error(e);
+    return json({ error: `Tallennus epäonnistui: ${e?.message || e}` }, 500);
+  }
 };
 
 export const config = { path: "/api/upload" };

@@ -1,7 +1,7 @@
 import { json, guard } from "../../lib/http.mjs";
 import { store } from "../../lib/store.mjs";
 
-export default async (req, context) => {
+const handler = async (req, context) => {
   const denied = guard(req);
   if (denied) return denied;
   const id = String(context.params?.id || "").toLowerCase();
@@ -15,6 +15,15 @@ export default async (req, context) => {
       "x-taken-at": blob.metadata?.takenAt || "",
     },
   });
+};
+
+export default async (req, context) => {
+  try {
+    return await handler(req, context);
+  } catch (e) {
+    console.error(e);
+    return json({ error: `Kuvaa ei saatu: ${e?.message || e}` }, 500);
+  }
 };
 
 export const config = { path: "/api/cam/:id" };
