@@ -71,7 +71,7 @@ button { font: inherit; color: inherit; }
   display: grid; gap: var(--gap);
   padding: max(12px, env(safe-area-inset-top)) 16px 28px;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "top" "notice" "weather" "cams" "car" "energy" "area" "news";
+  grid-template-areas: "top" "notice" "weather" "cams" "car" "energy" "gym" "area" "news";
 }
 .top { grid-area: top; }
 .notice { grid-area: notice; }
@@ -81,13 +81,14 @@ button { font: inherit; color: inherit; }
 .energy { grid-area: energy; }
 .area { grid-area: area; }
 .news { grid-area: news; }
+.gym { grid-area: gym; }
 
 /* Tabletti */
 @media (min-width: 760px) {
   .app {
     padding-inline: var(--pad);
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-areas: "top top" "notice notice" "weather weather" "cams cams" "car energy" "area news";
+    grid-template-areas: "top top" "notice notice" "weather weather" "cams cams" "car energy" "gym gym" "area news";
   }
 }
 
@@ -104,13 +105,12 @@ button { font: inherit; color: inherit; }
       "notice notice notice notice notice notice notice notice notice notice notice notice"
       "weather weather weather weather weather cams cams cams cams cams cams cams"
       "weather weather weather weather weather car car car energy energy energy energy"
-      "area area area area area news news news news news news news";
+      "area area area area gym gym gym gym news news news news";
   }
   .panel, .weather, .cams { min-height: 0; }
   .panel { display: flex; flex-direction: column; }
   .panel-body { flex: 1; min-height: 0; }
   .scroll { overflow-y: auto; overscroll-behavior: contain; padding-right: 6px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
-  .news .list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; }
   .cam-grid { height: 100%; }
   .cam, .cam img, .cam button { height: 100%; }
   .cam img { aspect-ratio: auto; }
@@ -307,3 +307,18 @@ button { font: inherit; color: inherit; }
 
 /* Koko näyttö: osoitin piiloon, kun hiirtä ei liikuteta */
 body.hide-cursor, body.hide-cursor * { cursor: none !important; }
+
+/* ---------- Ole.Fit ---------- */
+.gym-day { font: 600 .95rem/1.2 var(--display); color: var(--muted); margin: 12px 0 4px; display: flex; justify-content: space-between; gap: 8px; }
+.gym-day:first-child { margin-top: 0; }
+.gym-list { list-style: none; margin: 0; padding: 0; }
+.gym-item { display: grid; grid-template-columns: 6.6rem 1fr auto; align-items: baseline; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--line); }
+.gym-item:last-child { border-bottom: 0; }
+.gym-time { font-variant-numeric: tabular-nums; color: var(--muted); }
+.gym-name { font-weight: 700; letter-spacing: .01em; }
+.gym-who { color: var(--muted); font-size: .85rem; }
+.gym-item.hl .gym-name { color: var(--amber); }
+.gym-item.past { opacity: .4; }
+.gym-item.live { background: color-mix(in srgb, var(--pine) 14%, transparent); border-radius: 8px; padding-inline: 8px; margin-inline: -8px; border-bottom-color: transparent; }
+.gym-badge { font-size: .72rem; font-weight: 700; color: var(--pine); margin-left: 8px; }
+.gym-soon { font-size: .72rem; color: var(--muted); margin-left: 8px; }

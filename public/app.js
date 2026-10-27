@@ -498,6 +498,70 @@ async function loadNews() {
   }
 }
 
+// ---------------- Ole.Fit ----------------
+let gymData = null;
+const fmtGymDay = fmt({ weekday: "long", day: "numeric", month: "numeric" });
+
+function hmToDate(ymd, hm) {
+  // Paikallinen aika Helsingissä: lasketaan erotus UTC:hen sen päivän keskipäivästä.
+  const noon = new Date(ymd + "T12:00:00Z");
+  const local = Number(fmtH.format(noon));
+  const offset = local - 12;
+  const [h, m] = hm.split(":").map(Number);
+  return new Date(Date.UTC(+ymd.slice(0, 4), +ymd.slice(5, 7) - 1, +ymd.slice(8, 10), h - offset, m));
+}
+
+function renderGym() {
+  const el = $("gym");
+  const g = gymData;
+  if (!g) return;
+  const now = new Date();
+  const today = fmtYMD.format(now);
+  if (today > g.validTo) {
+    el.innerHTML = `<div class="empty"><p>Aikataulu oli voimassa ${esc(fmtDM.format(new Date(g.validTo + "T12:00:00Z")))} asti.</p><p class="muted">Päivitä uudet tunnit tiedostoon olefit.json.</p></div>`;
+    return;
+  }
+  const hl = new Set((g.highlight || []).map((x) => x.toUpperCase()));
+  const blocks = [];
+  let shown = 0;
+  for (let i = 0; i < 7 && (blocks.length < 2 || shown < 4); i++) {
+    const d = new Date(now.getTime() + i * 86400000);
+    const ymd = fmtYMD.format(d);
+    if (ymd < g.validFrom || ymd > g.validTo) continue;
+    const wd = ((new Date(ymd + "T12:00:00Z").getUTCDay() + 6) % 7) + 1; // 1 = maanantai
+    let items = (g.week[String(wd)] || []).map((c) => ({ ...c, s: hmToDate(ymd, c.start), e: hmToDate(ymd, c.end) }));
+    if (i === 0 && !items.some((c) => c.e > now)) continue; // tämän päivän tunnit ohi
+    if (!items.length) continue;
+    const label = i === 0 ? "Tänään" : i === 1 ? "Huomenna" : cap(fmtGymDay.format(d));
+    blocks.push(`<h3 class="gym-day"><span>${esc(label)}</span>${i > 1 ? "" : `<span>${esc(cap(fmtWeekday.format(d)))}</span>`}</h3>
+      <ul class="gym-list">${items.map((c) => {
+        const live = c.s <= now && c.e > now;
+        const past = c.e <= now;
+        const mins = Math.round((c.s - now) / 60000);
+        const soon = !live && !past && mins <= 120 ? `<span class="gym-soon">${mins < 60 ? `${mins} min päästä` : `${Math.floor(mins / 60)} h ${mins % 60} min päästä`}</span>` : "";
+        return `<li class="gym-item${hl.has(c.name.toUpperCase()) ? " hl" : ""}${live ? " live" : ""}${past ? " past" : ""}">
+          <span class="gym-time">${esc(c.start.replace(":", "."))}–${esc(c.end.replace(":", "."))}</span>
+          <span><span class="gym-name">${esc(c.name)}</span>${live ? `<span class="gym-badge">käynnissä</span>` : soon}</span>
+          <span class="gym-who">${esc(c.who || "")}</span></li>`;
+      }).join("")}</ul>`);
+    shown += items.length;
+  }
+  el.innerHTML = blocks.join("") || `<p class="muted">Ei tunteja lähipäivinä.</p>`;
+}
+
+async function loadGym() {
+  try {
+    if (!gymData) {
+      const r = await fetch("/olefit.json", { cache: "no-cache" });
+      if (!r.ok) throw new Error("Tuntiaikataulua ei löytynyt");
+      gymData = await r.json();
+    }
+    renderGym();
+  } catch (e) {
+    failed($("gym"), e);
+  }
+}
+
 // ---------------- Käynnistys ja päivitys ----------------
 let timers = [];
 function stopTimers() {
@@ -510,7 +574,7 @@ function every(fn, ms) {
 
 function refreshAll() {
   tick();
-  loadWeather(); loadCams(); loadCar(); loadArea(); loadNews();
+  loadWeather(); loadCams(); loadCar(); loadArea(); loadNews(); loadGym();
   loadEnergy.fetch = true; loadEnergy();
 }
 
@@ -542,6 +606,7 @@ async function start() {
   refreshAll();
   timers.push(setInterval(tick, 1000));
   every(renderSun, 5 * 60 * 1000);
+  every(renderGym, 60 * 1000);
   every(loadCams, 60 * 1000);
   every(loadWeather, 10 * 60 * 1000);
   every(() => { loadCar(); loadArea(); loadNews(); loadEnergy.fetch = true; loadEnergy(); }, 5 * 60 * 1000);
