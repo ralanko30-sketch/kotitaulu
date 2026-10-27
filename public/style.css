@@ -304,3 +304,6 @@ button { font: inherit; color: inherit; }
   .days .icon { width: 1.5rem; height: 1.5rem; }
   .clock-time { font-size: 2.2rem; }
 }
+
+/* Koko näyttö: osoitin piiloon, kun hiirtä ei liikuteta */
+body.hide-cursor, body.hide-cursor * { cursor: none !important; }

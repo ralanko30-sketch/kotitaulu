@@ -155,6 +155,31 @@ $("theme").addEventListener("click", () => {
   loadEnergy();
 });
 
+// ---------------- Koko näyttö ----------------
+const fsEl = document.documentElement;
+const canFs = !!(fsEl.requestFullscreen || fsEl.webkitRequestFullscreen);
+const fsActive = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+function updateFsLabel() {
+  $("fullscreen").hidden = !canFs;
+  $("fullscreen").textContent = fsActive() ? "Poistu koko näytöstä" : "Koko näyttö";
+  document.body.classList.toggle("is-fullscreen", fsActive());
+}
+$("fullscreen").addEventListener("click", async () => {
+  try {
+    if (fsActive()) await (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else await (fsEl.requestFullscreen || fsEl.webkitRequestFullscreen).call(fsEl, { navigationUI: "hide" });
+  } catch (e) {}
+});
+document.addEventListener("fullscreenchange", updateFsLabel);
+document.addEventListener("webkitfullscreenchange", updateFsLabel);
+// Koko näytössä hiiren osoitin piiloutuu, kun sitä ei liikuteta.
+let cursorT;
+document.addEventListener("mousemove", () => {
+  document.body.classList.remove("hide-cursor");
+  clearTimeout(cursorT);
+  cursorT = setTimeout(() => { if (fsActive()) document.body.classList.add("hide-cursor"); }, 3000);
+});
+
 // ---------------- Sää ----------------
 let weatherData = null;
 let selectedDay = 0;
@@ -511,6 +536,7 @@ async function start() {
   $("login").hidden = true;
   $("app").hidden = false;
   applyThemeLabel();
+  updateFsLabel();
   showFordNotice();
   stopTimers();
   refreshAll();
