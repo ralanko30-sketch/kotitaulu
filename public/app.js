@@ -334,30 +334,30 @@ async function loadCar() {
       return;
     }
     const c = d.car;
-    const ev = c.soc != null;
-    const pct = ev ? c.soc : c.fuelLevel;
-    const label = ev ? "akku" : "polttoaine";
     const charging = CHARGE[String(c.charging || "").toUpperCase()];
     const plug = PLUG[String(c.plug || "").toUpperCase()];
-    const fuelText = c.fuelLevel != null ? `${num(c.fuelLevel)} %${c.fuelRangeKm != null ? `, ${num(c.fuelRangeKm)} km` : ""}` : null;
+    const gauge = (name, pct, km, cls) => pct == null ? "" : `
+      <div class="gauge ${cls}${pct < 20 ? " low" : ""}">
+        <div class="gauge-top"><span class="gauge-name">${esc(name)}</span><span class="gauge-km">${km != null ? `${num(km)} km` : ""}</span></div>
+        <b class="gauge-pct">${num(pct)}<small>%</small></b>
+        <div class="gauge-bar"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></div>
+      </div>`;
+    const gauges = [gauge("Akku", c.soc, c.batteryRangeKm, "ev"), gauge("Bensa", c.fuelLevel, c.fuelRangeKm ?? (c.soc == null ? c.rangeKm : null), "fuel")].filter(Boolean);
+    const chargeText = charging === "Lataa" && c.minutesToFull > 0
+      ? `Lataa, ${Math.floor(c.minutesToFull / 60)} h ${c.minutesToFull % 60} min`
+      : plug ? (plug === "Kytketty" && charging ? charging : plug) : null;
     const rows = [
-      [ev ? "Sähköllä" : "Toimintamatka", (ev ? c.batteryRangeKm : c.fuelRangeKm ?? c.rangeKm) != null ? `${num(ev ? c.batteryRangeKm : c.fuelRangeKm ?? c.rangeKm)} km` : null],
-      ["Bensaa", ev ? fuelText : null],
-      charging === "Lataa" && c.minutesToFull > 0
-        ? ["Lataa, täynnä", `${Math.floor(c.minutesToFull / 60)} h ${c.minutesToFull % 60} min`]
-        : ["Lataus", plug ? (plug === "Kytketty" && charging ? charging : plug) : null],
+      ["Lataus", chargeText],
       ["Ovet", c.locked == null ? null : c.locked ? `<span class="good">Lukossa</span>` : `<span class="warn">Auki</span>`],
       ["Mittari", c.odometerKm != null ? `${num(c.odometerKm)} km` : null],
-    ].filter(([, v]) => v).slice(0, 6);
+    ].filter(([, v]) => v);
+    const short = (w) => w.replace("Etu ", "E").replace("Taka ", "T").replace("vas.", "V").replace("oik.", "O");
     const tires = (c.tires || []).length
-      ? `<div class="tires" aria-label="Rengaspaineet">
-          <span class="tires-h">Renkaat, bar</span>
-          ${c.tires.map((t) => `<span class="${t.low ? "warn" : ""}" title="${esc(t.wheel)}${t.low ? ", paine matala" : ""}"><small>${esc(t.wheel.replace("Etu ", "E").replace("Taka ", "T").replace("vas.", "V").replace("oik.", "O"))}</small>${num(t.bar, 1)}</span>`).join("")}
-        </div>`
+      ? `<div class="tires"><span class="tires-h">Renkaat, bar</span>${c.tires.map((t) => `<span class="${t.low ? "warn" : ""}" title="${esc(t.wheel)}${t.low ? ", paine matala" : ""}"><small>${esc(short(t.wheel))}</small>${num(t.bar, 1)}</span>`).join("")}</div>`
       : "";
     el.innerHTML = `
-      <div class="soc-row" title="Auto päivitti tiedot ${esc(ago(c.updated))}"><span class="soc">${num(pct)} %</span><span class="muted car-name">${esc(label)}, ${esc(c.name)}</span><span class="muted upd">${esc(ago(c.updated))}</span></div>
-      <div class="battery${pct != null && pct < 20 ? " low" : ""}${ev ? "" : " fuel"}"><span style="width:${Math.max(0, Math.min(100, pct || 0))}%"></span></div>
+      <p class="car-head muted"><span class="car-name">${esc(c.name)}</span><span title="Auto lähetti tiedot ${esc(ago(c.updated))}">${esc(ago(c.updated))}</span></p>
+      <div class="gauges${gauges.length > 1 ? " two" : ""}">${gauges.join("")}</div>
       <dl class="facts">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}</dl>
       ${tires}
       ${d.stale ? `<p class="muted note">Uusin haku epäonnistui.</p>` : ""}`;
