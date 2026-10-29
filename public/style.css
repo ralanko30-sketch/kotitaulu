@@ -378,7 +378,9 @@ body.hide-cursor, body.hide-cursor * { cursor: none !important; }
 .tires-h { color: var(--muted); font-size: .78rem; font-weight: 400; }
 .tires small { color: var(--muted); font-weight: 400; font-size: .75rem; margin-right: 4px; }
 .tires .warn small { color: var(--berry); }
-.soc-row .upd { margin-left: auto; font-size: .78rem; }
+.soc-row { flex-wrap: nowrap; min-width: 0; }
+.soc-row .car-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.soc-row .upd { margin-left: auto; font-size: .78rem; white-space: nowrap; flex: none; }
 
 /* ---------- Kalenteri ---------- */
 .cal-day { font: 600 .9rem/1.2 var(--display); color: var(--muted); margin: 10px 0 2px; display: flex; justify-content: space-between; gap: 8px; }

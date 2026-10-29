@@ -354,9 +354,9 @@ async function loadCar() {
           <span class="tires-h">Renkaat, bar</span>
           ${c.tires.map((t) => `<span class="${t.low ? "warn" : ""}" title="${esc(t.wheel)}${t.low ? ", paine matala" : ""}"><small>${esc(t.wheel.replace("Etu ", "E").replace("Taka ", "T").replace("vas.", "V").replace("oik.", "O"))}</small>${num(t.bar, 1)}</span>`).join("")}
         </div>`
-      : `<p class="muted note">Rengaspaineita ei saatu autolta.</p>`;
+      : "";
     el.innerHTML = `
-      <div class="soc-row" title="Auto päivitti tiedot ${esc(ago(c.updated))}"><span class="soc">${num(pct)} %</span><span class="muted">${esc(label)}, ${esc(c.name)}</span><span class="muted upd">${esc(ago(c.updated))}</span></div>
+      <div class="soc-row" title="Auto päivitti tiedot ${esc(ago(c.updated))}"><span class="soc">${num(pct)} %</span><span class="muted car-name">${esc(label)}, ${esc(c.name)}</span><span class="muted upd">${esc(ago(c.updated))}</span></div>
       <div class="battery${pct != null && pct < 20 ? " low" : ""}${ev ? "" : " fuel"}"><span style="width:${Math.max(0, Math.min(100, pct || 0))}%"></span></div>
       <dl class="facts">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}</dl>
       ${tires}
@@ -745,7 +745,8 @@ function renderCal() {
     return;
   }
   const now = new Date();
-  let html = d.week.length ? calRows(d.week, now, true) : `<p class="calm">Ei tapahtumia seuraavan viikon aikana.</p>`;
+  const st = (d.stats || []).map((x) => `${x.calName || x.name}: ${x.events} tapahtumaa, joista tulevia ${x.upcoming}`).join(". ");
+  let html = d.week.length ? calRows(d.week, now, true) : `<p class="calm">Ei tapahtumia seuraavan viikon aikana.</p>${st ? `<p class="muted note">Luettu ${esc(st)}.</p>` : ""}`;
   if (d.later.length) html += `<h3 class="cal-sub">Myöhemmin ${esc(fmtMonth.format(new Date(Date.parse(d.monthEnd) - 86400000)))}ssa</h3>${calRows(d.later, now, false)}`;
   if (d.next.length) html += `<h3 class="cal-sub">Tulossa ${esc(fmtMonth.format(new Date(d.monthEnd)))}ssa</h3>${calRows(d.next, now, false)}`;
   if (d.failed?.length) html += `<p class="muted note">Ei vastannut: ${esc(d.failed.join(", "))}</p>`;
