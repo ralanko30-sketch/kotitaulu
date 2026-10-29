@@ -72,7 +72,7 @@ button { font: inherit; color: inherit; }
   display: grid; gap: var(--gap);
   padding: max(12px, env(safe-area-inset-top)) 16px 28px;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "top" "notice" "weather" "cams" "air" "car" "energy" "gym" "area" "news";
+  grid-template-areas: "top" "notice" "weather" "cams" "cal" "air" "car" "energy" "gym" "area" "news";
 }
 .top { grid-area: top; }
 .notice { grid-area: notice; }
@@ -83,6 +83,7 @@ button { font: inherit; color: inherit; }
 .area { grid-area: area; }
 .news { grid-area: news; }
 .gym { grid-area: gym; }
+.cal { grid-area: cal; }
 .air { grid-area: air; }
 
 /* Tabletti */
@@ -90,7 +91,7 @@ button { font: inherit; color: inherit; }
   .app {
     padding-inline: var(--pad);
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-areas: "top top" "notice notice" "weather weather" "cams cams" "air car" "energy gym" "area news";
+    grid-template-areas: "top top" "notice notice" "weather weather" "cams cams" "air car" "cal gym" "energy energy" "area news";
   }
 }
 
@@ -100,14 +101,14 @@ button { font: inherit; color: inherit; }
   .app {
     height: 100dvh; overflow: hidden;
     padding: var(--pad);
-    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-columns: repeat(24, minmax(0, 1fr));
     grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 0.92fr) minmax(0, 0.9fr);
     grid-template-areas:
-      "top top top top top top top top top top top top"
-      "notice notice notice notice notice notice notice notice notice notice notice notice"
-      "weather weather weather weather weather cams cams cams cams cams cams cams"
-      "weather weather weather weather weather car car car air air air air"
-      "area area area gym gym gym energy energy energy news news news";
+      "top top top top top top top top top top top top top top top top top top top top top top top top"
+      "notice notice notice notice notice notice notice notice notice notice notice notice notice notice notice notice notice notice notice notice notice notice notice notice"
+      "weather weather weather weather weather weather weather weather weather weather cams cams cams cams cams cams cams cams cams cams cams cams cams cams"
+      "weather weather weather weather weather weather weather weather weather weather car car car car car car air air air air air air air air"
+      "area area area area area gym gym gym gym gym cal cal cal cal cal cal energy energy energy energy news news news news";
   }
   .panel, .weather, .cams { min-height: 0; }
   .panel { display: flex; flex-direction: column; }
@@ -246,14 +247,15 @@ button { font: inherit; color: inherit; }
 
 /* ---------- Auto ---------- */
 .soc-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.soc { font: 800 2.8rem/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.soc { font: 800 2.5rem/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .battery { height: 10px; border-radius: 5px; background: var(--panel-2); overflow: hidden; margin: 8px 0 10px; }
 .battery > span { display: block; height: 100%; background: var(--pine); border-radius: 6px; }
 .battery.low > span { background: var(--berry); }
 .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 14px; margin: 0; }
 .facts div { min-width: 0; }
 .facts dt { color: var(--muted); font-size: .82rem; }
-.facts dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 700; }
+.facts dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.facts dt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .good { color: var(--pine); }
 .warn { color: var(--berry); }
 .car .note { font-size: .8rem; margin: 10px 0 0; }
@@ -353,9 +355,9 @@ body.hide-cursor, body.hide-cursor * { cursor: none !important; }
 .aq-good { color: var(--pine); }
 .aq-mod { color: var(--amber); }
 .aq-bad { color: var(--berry); }
-.air-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; margin: 6px 0 8px; }
+.air-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px 10px; margin: 6px 0 8px; }
 .air-grid dt { color: var(--muted); font-size: .75rem; }
-.air-grid dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; font-size: .92rem; }
+.air-grid dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; font-size: .86rem; white-space: nowrap; }
 .air-ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .seg button { border: 0; background: transparent; padding: 5px 9px; cursor: pointer; font-size: .82rem; }
@@ -368,4 +370,31 @@ body.hide-cursor, body.hide-cursor * { cursor: none !important; }
 @media (max-width: 520px) {
   .climate { grid-template-columns: 1fr; gap: 16px; }
   .clim-col + .clim-col { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 14px; }
+}
+
+/* Auto: rengaspaineet ja polttoaine */
+.battery.fuel > span { background: var(--amber); }
+.tires { margin-top: 8px; display: flex; align-items: baseline; gap: 6px 14px; flex-wrap: wrap; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tires-h { color: var(--muted); font-size: .78rem; font-weight: 400; }
+.tires small { color: var(--muted); font-weight: 400; font-size: .75rem; margin-right: 4px; }
+.tires .warn small { color: var(--berry); }
+.soc-row .upd { margin-left: auto; font-size: .78rem; }
+
+/* ---------- Kalenteri ---------- */
+.cal-day { font: 600 .9rem/1.2 var(--display); color: var(--muted); margin: 10px 0 2px; display: flex; justify-content: space-between; gap: 8px; }
+.cal-day:first-child { margin-top: 0; }
+.cal-day.today { color: var(--ink); }
+.cal-list { list-style: none; margin: 0; padding: 0; }
+.cal-item { display: grid; grid-template-columns: 4.6rem 1fr; gap: 8px; padding: 4px 0 4px 8px; border-left: 3px solid var(--c, var(--ice)); margin: 3px 0; }
+.cal-item.past { opacity: .45; }
+.cal-item.live { background: color-mix(in srgb, var(--c, var(--ice)) 14%, transparent); border-radius: 0 6px 6px 0; }
+.cal-time { font-variant-numeric: tabular-nums; color: var(--muted); font-size: .88rem; }
+.cal-title { font-weight: 700; line-height: 1.25; }
+.cal-loc { display: block; color: var(--muted); font-size: .78rem; font-weight: 400; }
+.cal-sub { font: 600 .9rem/1.2 var(--display); color: var(--muted); margin: 14px 0 2px; padding-top: 10px; border-top: 1px solid var(--line); }
+.cal-c0 { --c: var(--ice); } .cal-c1 { --c: var(--amber); } .cal-c2 { --c: var(--pine); } .cal-c3 { --c: var(--berry); }
+/* Kapeammat paneelit seinänäytössä */
+@media (min-width: 1200px) and (min-height: 680px) and (orientation: landscape) {
+  .energy .kpi b { font-size: 1.35rem; }
+  .energy .kpi span { font-size: .72rem; }
 }

@@ -334,23 +334,33 @@ async function loadCar() {
       return;
     }
     const c = d.car;
-    const pct = c.soc ?? c.fuelLevel;
-    const label = c.soc != null ? "akku" : "polttoaine";
+    const ev = c.soc != null;
+    const pct = ev ? c.soc : c.fuelLevel;
+    const label = ev ? "akku" : "polttoaine";
     const charging = CHARGE[String(c.charging || "").toUpperCase()];
     const plug = PLUG[String(c.plug || "").toUpperCase()];
+    const fuelText = c.fuelLevel != null ? `${num(c.fuelLevel)} %${c.fuelRangeKm != null ? `, ${num(c.fuelRangeKm)} km` : ""}` : null;
     const rows = [
-      ["Toimintamatka", c.rangeKm != null ? `${num(c.rangeKm)} km` : null],
-      ["Lataus", plug ? (plug === "Kytketty" && charging ? charging : plug) : null],
-      ["Täyteen", c.minutesToFull > 0 && charging === "Lataa" ? `${Math.floor(c.minutesToFull / 60)} h ${c.minutesToFull % 60} min` : null],
+      [ev ? "Sähköllä" : "Toimintamatka", (ev ? c.batteryRangeKm : c.fuelRangeKm ?? c.rangeKm) != null ? `${num(ev ? c.batteryRangeKm : c.fuelRangeKm ?? c.rangeKm)} km` : null],
+      ["Bensaa", ev ? fuelText : null],
+      charging === "Lataa" && c.minutesToFull > 0
+        ? ["Lataa, täynnä", `${Math.floor(c.minutesToFull / 60)} h ${c.minutesToFull % 60} min`]
+        : ["Lataus", plug ? (plug === "Kytketty" && charging ? charging : plug) : null],
       ["Ovet", c.locked == null ? null : c.locked ? `<span class="good">Lukossa</span>` : `<span class="warn">Auki</span>`],
       ["Mittari", c.odometerKm != null ? `${num(c.odometerKm)} km` : null],
-      ["Sijainti", c.position ? `<a href="https://www.openstreetmap.org/?mlat=${c.position.lat}&mlon=${c.position.lon}#map=16/${c.position.lat}/${c.position.lon}" target="_blank" rel="noopener">Kartalla</a>` : null],
-    ].filter(([, v]) => v);
+    ].filter(([, v]) => v).slice(0, 6);
+    const tires = (c.tires || []).length
+      ? `<div class="tires" aria-label="Rengaspaineet">
+          <span class="tires-h">Renkaat, bar</span>
+          ${c.tires.map((t) => `<span class="${t.low ? "warn" : ""}" title="${esc(t.wheel)}${t.low ? ", paine matala" : ""}"><small>${esc(t.wheel.replace("Etu ", "E").replace("Taka ", "T").replace("vas.", "V").replace("oik.", "O"))}</small>${num(t.bar, 1)}</span>`).join("")}
+        </div>`
+      : `<p class="muted note">Rengaspaineita ei saatu autolta.</p>`;
     el.innerHTML = `
-      <div class="soc-row"><span class="soc">${num(pct)} %</span><span class="muted">${esc(label)}, ${esc(c.name)}</span></div>
-      <div class="battery${pct != null && pct < 20 ? " low" : ""}"><span style="width:${Math.max(0, Math.min(100, pct || 0))}%"></span></div>
+      <div class="soc-row" title="Auto päivitti tiedot ${esc(ago(c.updated))}"><span class="soc">${num(pct)} %</span><span class="muted">${esc(label)}, ${esc(c.name)}</span><span class="muted upd">${esc(ago(c.updated))}</span></div>
+      <div class="battery${pct != null && pct < 20 ? " low" : ""}${ev ? "" : " fuel"}"><span style="width:${Math.max(0, Math.min(100, pct || 0))}%"></span></div>
       <dl class="facts">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}</dl>
-      <p class="muted note">Päivitetty ${esc(ago(c.updated))}${d.stale ? ", uusin haku epäonnistui" : ""}</p>`;
+      ${tires}
+      ${d.stale ? `<p class="muted note">Uusin haku epäonnistui.</p>` : ""}`;
   } catch (e) {
     failed(el, e);
   }
@@ -371,7 +381,7 @@ function dayBars(daily, el) {
     days.map((d, i) => {
       const h = ((d.kwh || 0) / max) * (H - padB - 6);
       const dt = new Date(d.date + "T12:00:00Z");
-      const lbl = (days.length - 1 - i) % 3 === 0 ? `<text x="${(i * bw + bw / 2).toFixed(1)}" y="${H - 4}" text-anchor="middle">${dt.getUTCDate()}.${dt.getUTCMonth() + 1}.</text>` : "";
+      const lbl = (days.length - 1 - i) % 3 === 0 ? `<text x="${(i === days.length - 1 ? W : i * bw + bw / 2).toFixed(1)}" y="${H - 4}" text-anchor="${i === days.length - 1 ? "end" : "middle"}">${dt.getUTCDate()}.${dt.getUTCMonth() + 1}.</text>` : "";
       return `<rect class="${i === days.length - 1 ? "last" : ""}" x="${(i * bw + bw * 0.16).toFixed(1)}" y="${(H - padB - h).toFixed(1)}" width="${(bw * 0.68).toFixed(1)}" height="${h.toFixed(1)}" rx="2"><title>${esc(d.date)}: ${num(d.kwh, 1)} kWh</title></rect>${lbl}`;
     }).join("") + `</svg>`;
 }
@@ -393,8 +403,8 @@ function renderEnergy() {
   el.innerHTML = `
     <div class="kpis">
       <div class="kpi"><b>${num(last?.kwh, 1)}</b><span>kWh ${last ? esc(fmtDM.format(new Date(last.date + "T12:00:00Z"))) : ""}</span></div>
-      <div class="kpi"><b>${num(avg, 1)}</b><span>kWh/vrk, 7 pv</span></div>
-      <div class="kpi"><b>${num(month, 0)}</b><span>kWh tässä kuussa</span></div>
+      <div class="kpi"><b>${num(avg, 1)}</b><span>kWh/pv ka.</span></div>
+      <div class="kpi"><b>${num(month, 0)}</b><span>kWh tässä kk</span></div>
     </div>
     <div class="bars"></div>
     <p class="muted note">Caruna, noin vuorokauden viiveellä. Haettu ${esc(ago(data.receivedAt))}.${lastError ? ` Viimeisin haku epäonnistui.` : ""}</p>`;
@@ -528,13 +538,15 @@ function renderAir() {
   el.innerHTML = `
     <h3 class="clim-h" title="${esc(p.name)}, päivitetty ${esc(ago(d.updated))}">Ilmanpuhdistin${p.connected ? "" : ` <span class="warn">ei yhteydessä</span>`}</h3>
     <div class="air-top">
-      <span class="aq ${cls}">${num(p.pm25)}<small>PM2.5</small></span>
+      <span class="aq ${cls}">${num(p.pm25)}<small>PM2.5 µg/m³</small></span>
       <span class="aq-label ${cls}">${esc(label)}</span>
     </div>
-    <dl class="air-grid" title="PM10 ${num(p.pm10)} µg/m³, TVOC ${num(p.tvoc)} ppb">
+    <dl class="air-grid" title="Lämpötila ${num(p.temp, 1)} °C, suodatin ${num(p.filterLife)} %">
+      ${cell("PM1", p.pm1 != null ? `${num(p.pm1)} µg/m³` : "–")}
+      ${cell("PM10", p.pm10 != null ? `${num(p.pm10)} µg/m³` : "–")}
+      ${cell("TVOC", p.tvoc != null ? `${num(p.tvoc)} ppb` : "–")}
       ${cell("CO₂", p.co2 != null ? `${num(p.co2)} ppm` : "–")}
       ${cell("Kosteus", p.humidity != null ? `${num(p.humidity)} %` : "–")}
-      ${cell("Lämpö", p.temp != null ? `${num(p.temp, 1)} °C` : "–")}
       ${cell("Suodatin", p.filterLife != null ? `${num(p.filterLife)} %` : "–")}
     </dl>
     <div class="air-ctrl">
@@ -692,6 +704,63 @@ function alertNotice(text) {
   setTimeout(() => { n.hidden = true; }, 15000);
 }
 
+// ---------------- Kalenteri ----------------
+let calData = null;
+const fmtCalDay = fmt({ weekday: "short", day: "numeric", month: "numeric" });
+const fmtMonth = fmt({ month: "long" });
+
+function calRows(events, now, withDay) {
+  const today = fmtYMD.format(now);
+  const groups = new Map();
+  for (const e of events) {
+    const key = e.allDay ? e.date : fmtYMD.format(new Date(e.start));
+    const k = key < today ? today : key; // monipäiväinen, jo alkanut
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(e);
+  }
+  const tomorrow = fmtYMD.format(new Date(now.getTime() + 86400000));
+  return [...groups.entries()].map(([day, list]) => {
+    const d = new Date(day + "T12:00:00Z");
+    const label = day === today ? "Tänään" : day === tomorrow ? "Huomenna" : cap(fmtCalDay.format(d));
+    return `<h3 class="cal-day${day === today ? " today" : ""}"><span>${esc(label)}</span>${withDay && (day === today || day === tomorrow) ? `<span>${esc(cap(fmtCalDay.format(d)))}</span>` : ""}</h3>
+      <ul class="cal-list">${list.map((e) => {
+        const s = new Date(e.start), en = new Date(e.end);
+        const live = !e.allDay && s <= now && en > now;
+        const past = !e.allDay && en <= now;
+        const multi = e.allDay && e.endDate && (new Date(e.endDate) - new Date(e.date)) > 86400000;
+        const time = e.allDay ? (multi ? `${fmtDM.format(new Date(e.date + "T12:00:00Z"))}–${fmtDM.format(new Date(new Date(e.endDate + "T12:00:00Z") - 86400000))}` : "Koko päivä") : fmtHM.format(s);
+        return `<li class="cal-item cal-c${Number(e.color) % 4}${live ? " live" : ""}${past ? " past" : ""}" title="${esc(e.cal)}${e.allDay ? "" : `, ${fmtHM.format(s)}–${fmtHM.format(en)}`}">
+          <span class="cal-time">${esc(time)}</span>
+          <span class="cal-title">${esc(e.title)}${e.location ? `<span class="cal-loc">${esc(e.location)}</span>` : ""}</span></li>`;
+      }).join("")}</ul>`;
+  }).join("");
+}
+
+function renderCal() {
+  const el = $("cal");
+  const d = calData;
+  if (!d) return;
+  if (!d.configured) {
+    el.innerHTML = `<div class="empty"><p>Google-kalenteria ei ole vielä yhdistetty.</p><p class="muted">Lisää kalenterin salainen iCal-osoite Netlifyyn muuttujaan GCAL_ICS.</p></div>`;
+    return;
+  }
+  const now = new Date();
+  let html = d.week.length ? calRows(d.week, now, true) : `<p class="calm">Ei tapahtumia seuraavan viikon aikana.</p>`;
+  if (d.later.length) html += `<h3 class="cal-sub">Myöhemmin ${esc(fmtMonth.format(new Date(Date.parse(d.monthEnd) - 86400000)))}ssa</h3>${calRows(d.later, now, false)}`;
+  if (d.next.length) html += `<h3 class="cal-sub">Tulossa ${esc(fmtMonth.format(new Date(d.monthEnd)))}ssa</h3>${calRows(d.next, now, false)}`;
+  if (d.failed?.length) html += `<p class="muted note">Ei vastannut: ${esc(d.failed.join(", "))}</p>`;
+  el.innerHTML = html;
+}
+
+async function loadCal() {
+  try {
+    calData = await api("/api/calendar");
+    renderCal();
+  } catch (e) {
+    failed($("cal"), e);
+  }
+}
+
 // ---------------- Ole.Fit ----------------
 let gymData = null;
 const fmtGymDay = fmt({ weekday: "long", day: "numeric", month: "numeric" });
@@ -768,7 +837,7 @@ function every(fn, ms) {
 
 function refreshAll() {
   tick();
-  loadWeather(); loadCams(); loadCar(); loadArea(); loadNews(); loadGym(); loadAir(); loadHp();
+  loadWeather(); loadCams(); loadCar(); loadArea(); loadNews(); loadGym(); loadAir(); loadHp(); loadCal();
   loadEnergy.fetch = true; loadEnergy();
 }
 
@@ -801,6 +870,8 @@ async function start() {
   timers.push(setInterval(tick, 1000));
   every(renderSun, 5 * 60 * 1000);
   every(renderGym, 60 * 1000);
+  every(renderCal, 60 * 1000);
+  every(loadCal, 10 * 60 * 1000);
   every(loadCams, 60 * 1000);
   every(loadWeather, 10 * 60 * 1000);
   every(() => { loadCar(); loadArea(); loadNews(); loadEnergy.fetch = true; loadEnergy(); }, 5 * 60 * 1000);
