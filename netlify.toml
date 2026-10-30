@@ -4,3 +4,12 @@
 
 [functions]
   node_bundler = "esbuild"
+
+# Sivun HTML/JS ei sisällä mitään yksityistä dataa; kaikki data kulkee
+# kirjautumisen vaativien /api/-funktioiden kautta.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "same-origin"

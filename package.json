@@ -1,8 +1,13 @@
 {
-  "name": "treenisivu",
+  "name": "kotitaulu",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
+  "description": "Kotitaulu: kamerat, sää, auto, sähkö, uutiset ja lähialueen tilanne yhdellä sivulla",
+  "scripts": {
+    "test": "node test/run.mjs"
+  },
   "dependencies": {
-    "@netlify/blobs": "*"
+    "@netlify/blobs": "^8.1.0"
   }
 }

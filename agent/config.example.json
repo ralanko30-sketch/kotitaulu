@@ -2,6 +2,9 @@
   "site_url": "https://TÄYTÄ-sivusi-nimi.netlify.app",
   "agent_key": "TÄYTÄ sama AGENT_KEY kuin Netlifyssa",
   "interval_minutes": 5,
+  "snapshot_minutes": 15,
+  "events": true,
+  "event_cooldown_seconds": 30,
 
   "cameras": [
     {
@@ -26,5 +29,11 @@
     "username": "TÄYTÄ Caruna Plus -sähköposti",
     "password": "TÄYTÄ Caruna Plus -salasana"
   },
-  "caruna_every_hours": 3
+  "caruna_every_hours": 3,
+
+  "lampopumppu": {
+    "host": "192.168.101.xxx",
+    "name": "Ilmalämpöpumppu"
+  },
+  "command_poll_seconds": 60
 }

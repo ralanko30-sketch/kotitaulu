@@ -4,3 +4,4 @@ pycaruna>=1.0.3
 beautifulsoup4>=4.12
 lxml>=5.0
 tzdata>=2024.1
+broadlink>=0.19

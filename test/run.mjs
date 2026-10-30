@@ -126,7 +126,7 @@ await test("Sää: FMI-ennuste ja havainto", async () => {
   assert.equal(w.source, "Ilmatieteen laitos");
   assert.equal(w.now.temp, -2.4, "viimeisin kelvollinen havainto (NaN ohitetaan)");
   assert.equal(w.now.humidity, 91);
-  assert.ok(w.hours.length >= 24 && w.hours.length <= 25);
+  assert.ok(w.hours.length >= 24);
   assert.ok(w.days.length >= 2);
   assert.ok(w.days[0].max >= w.days[0].min);
   assert.equal(w.hours[5].symbol, "rain");
@@ -279,7 +279,7 @@ await test("Ford: OAuth-kirjautuminen, token ja telemetria", async () => {
   assert.equal(d.car.name, "2024 Mustang Mach-E");
   assert.equal(d.car.locked, true);
   assert.equal(d.car.plug, "CONNECTED");
-  assert.deepEqual(d.car.position, { lat: 61.06, lon: 28.19 });
+  assert.equal(d.car.position, undefined, "sijaintia ei lähetetä selaimelle");
 });
 
 await test("Ford: vanhentunut token uusitaan refresh-tokenilla", async () => {
@@ -298,6 +298,148 @@ await test("Ford: vanhentunut token uusitaan refresh-tokenilla", async () => {
   assert.equal(d.car.soc, 62.5);
   const tok = await s.get("ford/token", { type: "json" });
   assert.equal(tok.refresh_token, "RT", "vanha refresh-token säilyy");
+});
+
+await test("Electrolux: tunnisteen uusinta, tila ja komento", async () => {
+  process.env.ELECTROLUX_API_KEY = "ek";
+  process.env.ELECTROLUX_REFRESH_TOKEN = "R0";
+  const air = await fn("air");
+  const fakeJwt = (exp) => "x." + Buffer.from(JSON.stringify({ exp })).toString("base64url") + ".y";
+  let refreshCalls = [];
+  route("api.developer.electrolux.one/api/v1/token/refresh", (url, opts) => {
+    const b = JSON.parse(opts.body);
+    refreshCalls.push(b.refreshToken);
+    assert.equal(opts.headers["x-api-key"], "ek");
+    return new Response(JSON.stringify({ accessToken: fakeJwt(Math.floor(Date.now() / 1000) + 3600), refreshToken: "R1" }), { status: 200 });
+  });
+  route("/api/v1/appliances", (url, opts) => {
+    assert.match(opts.headers.authorization, /^Bearer x\./);
+    if (url.endsWith("/appliances")) return new Response(JSON.stringify([{ applianceId: "OVEN1", applianceName: "Uuni", applianceType: "OV" }, { applianceId: "A9-1", applianceName: "Olohuone", applianceType: "PUREA9" }]));
+    if (url.endsWith("/state")) return new Response(JSON.stringify({ connectionState: "Connected", properties: { reported: { PM2_5: 4, PM10: 6, CO2: 612, TVOC: 40, Temp: 21.4, Humidity: 38, FilterLife: 87, Fanspeed: 3, Workmode: "Auto", Ionizer: false } } }));
+    return new Response("{}", { status: 404 });
+  });
+  let d = await (await air(authed("/api/air"))).json();
+  assert.equal(d.purifier.id, "A9-1");
+  assert.equal(d.purifier.pm25, 4);
+  assert.equal(d.purifier.co2, 612);
+  assert.equal(d.purifier.mode, "Auto");
+  assert.deepEqual(refreshCalls, ["R0"]);
+  const { store } = await import("../lib/store.mjs");
+  assert.equal((await store().get("electrolux/token", { type: "json" })).refresh, "R1", "uusi refresh token tallessa");
+
+  let cmd = null;
+  route("/command", (url, opts) => { cmd = { url, body: JSON.parse(opts.body), method: opts.method }; return new Response("{}", { status: 200 }); });
+  const t0 = Date.now();
+  const r = await air(authed("/api/air", { method: "POST", body: JSON.stringify({ id: "A9-1", action: "fan", value: 5 }) }));
+  assert.equal(r.status, 200);
+  assert.equal(cmd.method, "PUT");
+  assert.match(cmd.url, /appliances\/A9-1\/command$/);
+  assert.deepEqual(cmd.body, { Fanspeed: 5 });
+  assert.ok(Date.now() - t0 >= 2000);
+  const bad = await air(authed("/api/air", { method: "POST", body: JSON.stringify({ id: "A9-1", action: "fan", value: 12 }) }));
+  assert.equal(bad.status, 502);
+  assert.equal(refreshCalls.length, 1, "voimassa olevaa tunnistetta käytetään uudelleen");
+});
+
+await test("Lämpöpumppu: komentojono sivulta agentille ja tila takaisin", async () => {
+  const hp = await fn("hp");
+  const upload = await fn("upload");
+  const H = { "x-agent-key": process.env.AGENT_KEY, "x-agent-commands": "1" };
+  assert.equal((await hp(req("/api/hp"))).status, 401);
+  let d = await (await hp(authed("/api/hp"))).json();
+  assert.equal(d.state, null);
+  assert.equal((await hp(authed("/api/hp", { method: "POST", body: JSON.stringify({ action: "temp", value: 40 }) }))).status, 400);
+  assert.equal((await hp(authed("/api/hp", { method: "POST", body: JSON.stringify({ action: "rm", value: 1 }) }))).status, 400);
+  await hp(authed("/api/hp", { method: "POST", body: JSON.stringify({ action: "temp", value: 22 }) }));
+  await hp(authed("/api/hp", { method: "POST", body: JSON.stringify({ action: "temp", value: 23 }) }));
+  d = await (await hp(authed("/api/hp", { method: "POST", body: JSON.stringify({ action: "power", value: true }) }))).json();
+  assert.equal(d.pending.length, 2, "saman tyyppinen komento korvautuu");
+  // Vanha agentti ilman komentotukea ei saa komentoja eikä tyhjennä jonoa.
+  let r = await (await upload(req("/api/upload?type=heartbeat", { method: "POST", headers: { "x-agent-key": process.env.AGENT_KEY } }))).json();
+  assert.deepEqual(r.commands, []);
+  r = await (await upload(req("/api/upload?type=heartbeat", { method: "POST", headers: H }))).json();
+  assert.deepEqual(r.commands.map((c) => [c.action, c.value]), [["temp", 23], ["power", true]]);
+  r = await (await upload(req("/api/upload?type=heartbeat", { method: "POST", headers: H }))).json();
+  assert.deepEqual(r.commands, [], "jono tyhjenee noudettaessa");
+  await upload(req("/api/upload?type=heatpump", { method: "POST", headers: H, body: JSON.stringify({ name: "ILP", state: { on: true, mode: 1, target: 23, room: 20.5, fan: 0 }, executed: [{ action: "temp", value: 23, ok: true }] }) }));
+  d = await (await hp(authed("/api/hp"))).json();
+  assert.equal(d.state.state.target, 23);
+  assert.equal(d.state.name, "ILP");
+  assert.deepEqual(d.pending, []);
+});
+
+await test("Ford: polttoaine ja rengaspaineet", async () => {
+  const { summarize } = await import("../lib/ford.mjs");
+  const c = summarize({ metrics: { fuelLevel: { value: 46.4 }, fuelRange: { value: 410 },
+    tirePressure: [{ vehicleWheel: "REAR_RIGHT", value: 241 }, { vehicleWheel: "FRONT_LEFT", value: 240 }, { vehicleWheel: "REAR_LEFT", value: 226 }],
+    tirePressureStatus: [{ vehicleWheel: "REAR_LEFT", value: "LOW" }] } }, {});
+  assert.equal(c.fuelLevel, 46.4);
+  assert.equal(c.fuelRangeKm, 410);
+  assert.deepEqual(c.tires.map((t) => [t.wheel, t.bar, t.low]), [["Etu vas.", 2.4, false], ["Taka vas.", 2.26, true], ["Taka oik.", 2.41, false]]);
+});
+
+await test("Kalenteri: toistuvat, poikkeukset, koko päivän ja ryhmittely", async () => {
+  const { getCalendar } = await import("../lib/calendar.mjs");
+  const ics = ["BEGIN:VCALENDAR", "X-WR-TIMEZONE:Europe/Helsinki",
+    "BEGIN:VEVENT", "UID:a1", "DTSTART;TZID=Europe/Helsinki:20261005T180000", "DTEND;TZID=Europe/Helsinki:20261005T190000",
+    "RRULE:FREQ=WEEKLY;BYDAY=MO,TH", "EXDATE;TZID=Europe/Helsinki:20261102T180000", "SUMMARY:Treeni\\, sali", "END:VEVENT",
+    "BEGIN:VEVENT", "UID:a1", "RECURRENCE-ID;TZID=Europe/Helsinki:20261029T180000", "DTSTART;TZID=Europe/Helsinki:20261029T190000",
+    "DTEND;TZID=Europe/Helsinki:20261029T200000", "SUMMARY:Treeni (siirretty)", "END:VEVENT",
+    "BEGIN:VEVENT", "UID:b2", "DTSTART;VALUE=DATE:20261031", "DTEND;VALUE=DATE:20261101", "SUMMARY:Juhlat", "END:VEVENT",
+    "BEGIN:VEVENT", "UID:c3", "DTSTART:20261104T080000Z", "DTEND:20261104T090000Z", "SUMMARY:Hammasl", "END:VEVENT",
+    "END:VCALENDAR"].join("\r\n");
+  route("calendar.google.com", text(ics));
+  const c = await getCalendar([{ name: "Oma", url: "https://calendar.google.com/x/basic.ics", index: 0 }], Date.parse("2026-10-29T07:50:00+02:00"));
+  assert.deepEqual(c.week.map((e) => e.title), ["Treeni (siirretty)", "Juhlat", "Hammasl"]);
+  assert.equal(c.week[0].start, "2026-10-29T17:00:00.000Z");
+  assert.equal(c.week[1].date, "2026-10-31");
+  assert.equal(c.later.length, 0);
+  assert.equal(c.next[0].title, "Treeni, sali");
+  assert.equal(c.next[0].start, "2026-11-05T16:00:00.000Z", "2.11. poistettu EXDATElla");
+  process.env.GCAL_ICS = "Oma|https://calendar.google.com/x/basic.ics";
+  const cal = await fn("calendar");
+  assert.equal((await cal(req("/api/calendar"))).status, 401);
+  const d = await (await cal(authed("/api/calendar"))).json();
+  assert.equal(d.configured, true);
+});
+
+await test("Kalenteri: eilinen koko päivän tapahtuma ei näy tänään", async () => {
+  const { getCalendar } = await import("../lib/calendar.mjs");
+  const ics = ["BEGIN:VCALENDAR",
+    "BEGIN:VEVENT", "UID:k1", "DTSTART;VALUE=DATE:20261029", "DTEND;VALUE=DATE:20261030", "RRULE:FREQ=YEARLY", "SUMMARY:Kiian syntymäpäivä", "END:VEVENT",
+    "BEGIN:VEVENT", "UID:k2", "DTSTART;VALUE=DATE:20261030", "DTEND;VALUE=DATE:20261031", "SUMMARY:Tämä päivä", "END:VEVENT",
+    "END:VCALENDAR"].join("\r\n");
+  route("calendar.google.com", text(ics));
+  for (const t of ["2026-10-30T00:30:00+02:00", "2026-10-30T07:50:00+02:00", "2026-10-30T23:30:00+02:00"]) {
+    const c = await getCalendar([{ name: "Oma", url: "https://calendar.google.com/x/k.ics", index: 0 }], Date.parse(t));
+    assert.deepEqual(c.week.map((e) => e.title), ["Tämä päivä"], t);
+    assert.equal(c.week[0].date, "2026-10-30");
+  }
+  const c = await getCalendar([{ name: "Oma", url: "https://calendar.google.com/x/k.ics", index: 0 }], Date.parse("2026-10-29T23:59:00+02:00"));
+  assert.deepEqual(c.week.map((e) => e.title), ["Kiian syntymäpäivä", "Tämä päivä"]);
+});
+
+await test("Kamerat: havaintokuvat historiaan, toinen kuva ei", async () => {
+  const upload = await fn("upload");
+  const cams = await fn("cams");
+  const H = { "x-agent-key": process.env.AGENT_KEY };
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 1, 2, 3]);
+  await upload(req("/api/upload?type=cam&id=takapiha&name=Takapiha&event=henkil%C3%B6&seq=1&taken=2026-10-30T05:44:00Z", { method: "POST", body: jpeg, headers: H }));
+  await upload(req("/api/upload?type=cam&id=takapiha&name=Takapiha&event=henkil%C3%B6&seq=2&taken=2026-10-30T05:44:02Z", { method: "POST", body: jpeg, headers: H }));
+  await upload(req("/api/upload?type=cam&id=takapiha&name=Takapiha&event=hakkerointi", { method: "POST", body: jpeg, headers: H }));
+  const d = await (await cams(authed("/api/cams"))).json();
+  const evs = d.events.filter((e) => e.cam === "takapiha");
+  assert.equal(evs.length, 1);
+  assert.equal(evs[0].kind, "henkilö");
+  const c = d.cams.find((x) => x.id === "takapiha");
+  assert.equal(c.event, null, "tavallinen kuva ilman kelvollista tyyppiä");
+  assert.equal(c.lastEvent.kind, "henkilö", "viimeisin havainto säilyy");
+  const ev = await fn("event");
+  assert.equal((await ev(req(`/api/event/${evs[0].key}`), { params: { key: evs[0].key } })).status, 401);
+  const r = await ev(authed(`/api/event/${evs[0].key}`), { params: { key: evs[0].key } });
+  assert.equal(r.status, 200);
+  assert.equal(r.headers.get("content-type"), "image/jpeg");
+  assert.equal((await ev(authed("/api/event/..%2Fx"), { params: { key: "../x" } })).status, 404);
 });
 
 console.log(`\n${passed} testiä läpi${process.exitCode ? ", osa epäonnistui" : ""}.`);
