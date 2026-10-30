@@ -422,44 +422,72 @@ async function loadEnergy() {
 }
 
 // ---------------- Kamerat ----------------
-const STALE_MIN = 20;
+const STALE_MIN = 35;
+
+const KIND_FI = { "henkilö": "Henkilö", liike: "Liikettä", ajoneuvo: "Ajoneuvo", "eläin": "Eläin" };
+const FRESH_MIN = 3;
 
 async function loadCams() {
   const el = $("cams");
   try {
-    const { cams, agentSeenAt } = await api("/api/cams");
+    const { cams, events = [], agentSeenAt } = await api("/api/cams");
     const agentMin = agentSeenAt ? (Date.now() - new Date(agentSeenAt)) / 60000 : Infinity;
     const st = $("agent-status");
-    st.className = `agent ${agentMin < STALE_MIN ? "ok" : "bad"}`;
+    st.className = `agent ${agentMin < 10 ? "ok" : "bad"}`;
     st.textContent = agentSeenAt ? `Kotikone ${ago(agentSeenAt)}` : "Kotikone ei yhteydessä";
     if (!cams.length) {
       el.innerHTML = `<div class="cam-empty"><p>Kamerakuvia ei ole vielä tullut.</p><p class="muted">Kuvat päivittyvät, kun kotikoneen agentti on käynnissä.</p></div>`;
       return;
     }
-    el.innerHTML = cams.map((c) => {
+    const html = cams.map((c) => {
       if (!c.takenAt) {
         return `<figure class="cam"><div class="cam-missing"><b>${esc(c.name)}</b><span>Kuvaa ei ole vielä saatu.</span><span class="muted">${esc(c.error || "")}</span></div></figure>`;
       }
       const stale = (Date.now() - new Date(c.takenAt)) / 60000 > STALE_MIN;
       const err = c.error && c.errorAt > c.takenAt ? `Viimeisin virhe: ${c.error}` : "";
-      return `<figure class="cam${stale ? " stale" : ""}">
-        <button type="button" data-cam="${esc(c.id)}" data-name="${esc(c.name)}" data-taken="${esc(c.takenAt)}" aria-label="Avaa ${esc(c.name)} isona">
+      const ev = c.lastEvent;
+      const evMin = ev ? (Date.now() - new Date(ev.at)) / 60000 : Infinity;
+      const fresh = c.event && evMin < FRESH_MIN;
+      const badge = ev && evMin < 24 * 60
+        ? `<span class="cam-badge${fresh ? " fresh" : ""} k-${ev.kind === "henkilö" ? "person" : "motion"}">${esc(KIND_FI[ev.kind] || "Havainto")} ${esc(fmtHM.format(new Date(ev.at)))}</span>`
+        : "";
+      const thumbs = events.filter((e) => e.cam === c.id).slice(0, 4);
+      const strip = thumbs.length
+        ? `<div class="cam-thumbs">${thumbs.map((e) => `<button type="button" class="thumb" data-ev="${esc(e.key)}" data-name="${esc(c.name)}" data-kind="${esc(e.kind)}" data-taken="${esc(e.at)}" title="${esc(KIND_FI[e.kind] || "Havainto")} ${esc(fmtShort.format(new Date(e.at)))}">
+            <img src="/api/event/${encodeURIComponent(e.key)}" alt="" loading="lazy"><span>${esc(fmtHM.format(new Date(e.at)))}</span></button>`).join("")}</div>`
+        : "";
+      return `<figure class="cam${stale ? " stale" : ""}${fresh ? " fresh" : ""}">
+        <button type="button" class="cam-main" data-cam="${esc(c.id)}" data-name="${esc(c.name)}" data-taken="${esc(c.takenAt)}" data-kind="${esc(c.event || "")}" aria-label="Avaa ${esc(c.name)} isona">
           <img src="/api/cam/${encodeURIComponent(c.id)}?t=${encodeURIComponent(c.takenAt)}" alt="${esc(c.name)}, kuva otettu ${esc(fmtShort.format(new Date(c.takenAt)))}">
         </button>
-        <figcaption><span><span class="live-dot" aria-hidden="true"></span><b>${esc(c.name)}</b></span><span title="${esc(err)}">${esc(ago(c.takenAt))}</span></figcaption>
+        ${badge}${strip}
+        <figcaption><span><span class="live-dot" aria-hidden="true"></span><b>${esc(c.name)}</b></span><span title="${esc(err)}">${c.event ? `${esc(KIND_FI[c.event] || "Havainto")}, ` : ""}${esc(ago(c.takenAt))}</span></figcaption>
       </figure>`;
     }).join("");
+    // Piirretään uudelleen vain, jos jokin muuttui (ei turhaa välkettä).
+    if (el.dataset.sig !== html) {
+      el.innerHTML = html;
+      el.dataset.sig = html;
+    }
   } catch (e) {
     failed(el, e);
   }
 }
 
 $("cams").addEventListener("click", (ev) => {
+  const t = ev.target.closest("button[data-ev]");
+  if (t) {
+    $("cam-dialog-img").src = `/api/event/${encodeURIComponent(t.dataset.ev)}`;
+    $("cam-dialog-img").alt = t.dataset.name;
+    $("cam-dialog-cap").textContent = `${t.dataset.name}: ${KIND_FI[t.dataset.kind] || "Havainto"} ${fmtShort.format(new Date(t.dataset.taken))}`;
+    $("cam-dialog").showModal();
+    return;
+  }
   const b = ev.target.closest("button[data-cam]");
   if (!b) return;
-  $("cam-dialog-img").src = `/api/cam/${encodeURIComponent(b.dataset.cam)}?t=${Date.now()}`;
+  $("cam-dialog-img").src = `/api/cam/${encodeURIComponent(b.dataset.cam)}?t=${encodeURIComponent(b.dataset.taken)}`;
   $("cam-dialog-img").alt = b.dataset.name;
-  $("cam-dialog-cap").textContent = `${b.dataset.name}, kuvattu ${fmtShort.format(new Date(b.dataset.taken))}`;
+  $("cam-dialog-cap").textContent = `${b.dataset.name}, ${b.dataset.kind ? `${(KIND_FI[b.dataset.kind] || "havainto").toLowerCase()}, ` : ""}kuvattu ${fmtShort.format(new Date(b.dataset.taken))}`;
   $("cam-dialog").showModal();
 });
 $("cam-dialog").addEventListener("click", (ev) => {
@@ -873,7 +901,7 @@ async function start() {
   every(renderGym, 60 * 1000);
   every(renderCal, 60 * 1000);
   every(loadCal, 10 * 60 * 1000);
-  every(loadCams, 60 * 1000);
+  every(loadCams, 30 * 1000);
   every(loadWeather, 10 * 60 * 1000);
   every(() => { loadCar(); loadArea(); loadNews(); loadEnergy.fetch = true; loadEnergy(); }, 5 * 60 * 1000);
   every(() => { if (!airBusy) loadAir(); }, 2 * 60 * 1000);

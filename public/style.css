@@ -416,3 +416,26 @@ body.hide-cursor, body.hide-cursor * { cursor: none !important; }
 .gauge.fuel .gauge-bar > span { background: var(--amber); }
 .gauge.low .gauge-bar > span { background: var(--berry); }
 .gauge.low .gauge-pct { color: var(--berry); }
+
+/* ---------- Kamerat: havainnot ---------- */
+.cam { isolation: isolate; }
+.cam.fresh { box-shadow: 0 0 0 3px var(--amber); }
+.cam-badge {
+  position: absolute; top: 10px; left: 10px; z-index: 2; pointer-events: none;
+  padding: 4px 10px; border-radius: 999px; font-size: .85rem; font-weight: 700;
+  background: rgba(6, 12, 16, .62); color: #fff; backdrop-filter: blur(4px);
+}
+.cam-badge.k-person::before, .cam-badge.k-motion::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; background: #9fd2ea; }
+.cam-badge.k-person::before { background: var(--amber); }
+.cam-badge.fresh { background: var(--amber); color: #1b1408; }
+.cam-badge.fresh::before { background: #1b1408; }
+@media (prefers-reduced-motion: no-preference) {
+  .cam-badge.fresh { animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .7; } }
+}
+.cam-thumbs { position: absolute; top: 8px; right: 8px; z-index: 2; display: flex; gap: 6px; }
+.cam-thumbs .thumb { all: unset; cursor: zoom-in; position: relative; width: 74px; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.35); }
+.cam-thumbs .thumb:focus-visible { outline: 3px solid var(--ice); }
+.cam-thumbs img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; height: auto !important; }
+.cam-thumbs span { position: absolute; left: 0; right: 0; bottom: 0; font-size: .68rem; text-align: center; color: #fff; background: rgba(6, 12, 16, .6); }
+@media (max-width: 520px) { .cam-thumbs .thumb { width: 54px; } .cam-thumbs .thumb:nth-child(n+4) { display: none; } }

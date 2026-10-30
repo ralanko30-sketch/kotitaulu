@@ -5,6 +5,18 @@ import { store } from "../../lib/store.mjs";
 import { saveState, takeCommands } from "../../lib/heatpump.mjs";
 
 const MAX_BYTES = 4 * 1024 * 1024;
+const EVENT_KINDS = new Set(["henkilö", "liike", "ajoneuvo", "eläin"]);
+const MAX_EVENTS = 24;
+
+async function addEvent(s, ev, buf) {
+  const key = `${ev.cam}-${Date.parse(ev.at) || Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  await s.set(`ev/${key}`, buf);
+  const list = (await s.get("events", { type: "json" })) || [];
+  list.unshift({ key, ...ev });
+  const keep = list.slice(0, MAX_EVENTS);
+  await s.setJSON("events", keep);
+  await Promise.all(list.slice(MAX_EVENTS).map((e) => s.delete(`ev/${e.key}`).catch(() => {})));
+}
 
 const handler = async (req) => {
   if (req.method !== "POST") return json({ error: "Väärä metodi" }, 405);
@@ -24,10 +36,20 @@ const handler = async (req) => {
     if (!buf.byteLength || buf.byteLength > MAX_BYTES) return json({ error: "Kuva puuttuu tai on liian suuri" }, 413);
     const name = (url.searchParams.get("name") || id).slice(0, 40);
     const takenAt = url.searchParams.get("taken") || now;
-    await s.set(`cam/${id}`, buf, { metadata: { name, takenAt, bytes: buf.byteLength } });
+    const kind = EVENT_KINDS.has(url.searchParams.get("event")) ? url.searchParams.get("event") : null;
+    await s.set(`cam/${id}`, buf, { metadata: { name, takenAt, bytes: buf.byteLength, event: kind } });
     const index = (await s.get("cam-index", { type: "json" })) || {};
-    index[id] = { name, takenAt };
+    const prev = index[id] || {};
+    index[id] = {
+      name,
+      takenAt,
+      event: kind,
+      // Viimeisin havainto säilyy tiedossa, vaikka tavallinen kuva korvaisi sen myöhemmin.
+      lastEvent: kind ? { kind, at: takenAt } : prev.lastEvent || null,
+    };
     await s.setJSON("cam-index", index);
+    // Havainnon toinen kuva päivittää vain pääkuvan; historiaan tallennetaan ensimmäinen.
+    if (kind && url.searchParams.get("seq") !== "2") await addEvent(s, { cam: id, name, kind, at: takenAt }, buf);
   } else if (type === "cam-error") {
     const body = await req.json().catch(() => ({}));
     const index = (await s.get("cam-index", { type: "json" })) || {};

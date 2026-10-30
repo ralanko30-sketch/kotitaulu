@@ -11,7 +11,8 @@ const handler = async (req, context) => {
   return new Response(blob.data, {
     headers: {
       "content-type": "image/jpeg",
-      "cache-control": "private, no-store",
+      // Osoitteessa on kuvan aikaleima (?t=...), joten sama osoite = sama kuva.
+      "cache-control": "private, max-age=86400",
       "x-taken-at": blob.metadata?.takenAt || "",
     },
   });
