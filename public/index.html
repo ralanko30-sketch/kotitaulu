@@ -1,128 +1,59 @@
 <!doctype html>
-<html lang="fi" data-theme="dark">
+<html lang="fi">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Kotitaulu</title>
-<meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#14222B">
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/icon.svg">
+<meta name="theme-color" content="#09080b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Treenisivu">
+<title>Treenisivu</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/style.css">
-<script>
-  try { const t = localStorage.getItem("kt-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
-</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <defs>
-    <symbol id="i-clear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></symbol>
-    <symbol id="i-clear-night" viewBox="0 0 24 24"><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a7.8 7.8 0 1 0 10.1 10.1z"/></symbol>
-    <symbol id="i-partly" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.4"/><path d="M9 2.8v1.6M3 9h1.6M4.8 4.8l1.1 1.1M13.2 4.8l-1.1 1.1"/><path d="M8.5 19.5h9.2a3.6 3.6 0 0 0 .3-7.2 5 5 0 0 0-9.6 1.4 2.9 2.9 0 0 0 .1 5.8z"/></symbol>
-    <symbol id="i-partly-night" viewBox="0 0 24 24"><path d="M12.6 8.8A4.6 4.6 0 0 1 6.4 3.4a4.6 4.6 0 1 0 6.2 5.4z"/><path d="M8.5 19.5h9.2a3.6 3.6 0 0 0 .3-7.2 5 5 0 0 0-9.6 1.4 2.9 2.9 0 0 0 .1 5.8z"/></symbol>
-    <symbol id="i-cloudy" viewBox="0 0 24 24"><path d="M7 19h10.5a4 4 0 0 0 .4-8 5.6 5.6 0 0 0-10.8 1.5A3.3 3.3 0 0 0 7 19z"/></symbol>
-    <symbol id="i-rain" viewBox="0 0 24 24"><path d="M7 15h10.5a4 4 0 0 0 .4-8 5.6 5.6 0 0 0-10.8 1.5A3.3 3.3 0 0 0 7 15z"/><path d="M8.5 18l-1 2.5M12.5 18l-1 2.5M16.5 18l-1 2.5"/></symbol>
-    <symbol id="i-snow" viewBox="0 0 24 24"><path d="M7 15h10.5a4 4 0 0 0 .4-8 5.6 5.6 0 0 0-10.8 1.5A3.3 3.3 0 0 0 7 15z"/><path d="M8 19.2h.01M12 20.4h.01M16 19.2h.01"/></symbol>
-    <symbol id="i-sleet" viewBox="0 0 24 24"><path d="M7 15h10.5a4 4 0 0 0 .4-8 5.6 5.6 0 0 0-10.8 1.5A3.3 3.3 0 0 0 7 15z"/><path d="M8.5 18l-1 2.5M12 19.5h.01M16.5 18l-1 2.5"/></symbol>
-    <symbol id="i-thunder" viewBox="0 0 24 24"><path d="M7 15h10.5a4 4 0 0 0 .4-8 5.6 5.6 0 0 0-10.8 1.5A3.3 3.3 0 0 0 7 15z"/><path d="M12.5 15.5l-2 3.3h3l-2 3"/></symbol>
-    <symbol id="i-fog" viewBox="0 0 24 24"><path d="M4 9h16M6 13h12M4 17h16"/></symbol>
-    <symbol id="i-sunrise" viewBox="0 0 24 24"><path d="M4 18h16M7 18a5 5 0 0 1 10 0M12 4v5M9.5 6.5L12 4l2.5 2.5"/></symbol>
-    <symbol id="i-sunset" viewBox="0 0 24 24"><path d="M4 18h16M7 18a5 5 0 0 1 10 0M12 9V4M9.5 6.5L12 9l2.5-2.5"/></symbol>
-    <symbol id="i-wind" viewBox="0 0 24 24"><path d="M3 9h11a3 3 0 1 0-3-3M3 15h15a3 3 0 1 1-3 3M3 12h7"/></symbol>
-  </defs>
-</svg>
+<section id="login" class="wrap hidden">
+  <div class="login card">
+    <div class="brand" style="margin-bottom:8px"><span class="dot"></span>Treenisivu</div>
+    <label class="f" for="pw">Salasana</label>
+    <input id="pw" type="password" autocomplete="current-password">
+    <label class="row small" style="margin-top:12px;gap:10px;flex-wrap:nowrap"><input type="checkbox" id="rememberLogin"> Muista minut tällä laitteella</label>
+    <div style="margin-top:12px"><button class="btn" id="loginBtn" style="width:100%">Kirjaudu</button></div>
+    <p id="loginErr" class="small" style="color:var(--bad)"></p>
+  </div>
+</section>
 
-<main id="login" class="login" hidden>
-  <form id="login-form" class="login-form">
-    <h1>Kotitaulu</h1>
-    <label for="password">Salasana</label>
-    <input id="password" name="password" type="password" autocomplete="current-password" required>
-    <button type="submit">Kirjaudu</button>
-    <p id="login-error" class="form-error" role="alert"></p>
-  </form>
-</main>
-
-<div id="app" class="app" hidden>
+<div id="app" class="hidden">
   <header class="top">
-    <div class="clock">
-      <time id="clock-time" class="clock-time"></time>
-      <span id="clock-date" class="clock-date"></span>
+    <div class="top-inner">
+      <div class="brand"><span class="dot"></span>Treenisivu</div>
+      <div class="spacer"></div>
+      <div class="sync-info" id="syncInfo"></div>
+      <button class="btn sm" id="syncBtn" title="Hae uudet tiedot Garminilta">Päivitä</button>
     </div>
-    <div id="sun" class="sun"></div>
-    <div class="top-status">
-      <span id="agent-status" class="agent"></span>
-      <button id="fullscreen" class="link-btn" type="button">Koko näyttö</button>
-      <button id="theme" class="link-btn" type="button">Vaalea teema</button>
-      <button id="logout" class="link-btn" type="button">Kirjaudu ulos</button>
-    </div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="today" class="on">Tänään</button>
+      <button data-tab="sports">Treenit</button>
+      <button data-tab="progress">Kehitys</button>
+      <button data-tab="calendar">Kalenteri</button>
+      <button data-tab="settings">Asetukset</button>
+    </nav>
   </header>
 
-  <div id="notice" class="notice" role="status" hidden></div>
-
-  <section id="weather-panel" class="weather sky-night" aria-label="Sää">
-    <div id="weather" class="weather-body"><p class="loading">Haetaan säätä…</p></div>
-  </section>
-
-  <section class="cams" aria-label="Kamerat">
-    <div id="cams" class="cam-grid"><p class="loading">Haetaan kamerakuvia…</p></div>
-  </section>
-
-  <section class="panel car" aria-labelledby="car-h">
-    <h2 id="car-h">Auto</h2>
-    <div id="car" class="panel-body"><p class="loading">Haetaan auton tietoja…</p></div>
-  </section>
-
-  <section class="panel air" aria-labelledby="air-h">
-    <h2 id="air-h" class="visually-hidden">Ilmasto</h2>
-    <div class="panel-body climate">
-      <div id="hp" class="clim-col"><p class="loading">Haetaan lämpöpumppua…</p></div>
-      <div id="air" class="clim-col"><p class="loading">Haetaan ilmanpuhdistinta…</p></div>
-    </div>
-  </section>
-
-  <section class="panel energy" aria-labelledby="energy-h">
-    <h2 id="energy-h">Sähkönkulutus</h2>
-    <div id="energy" class="panel-body"><p class="loading">Haetaan kulutusta…</p></div>
-  </section>
-
-  <section class="panel area" aria-labelledby="area-h">
-    <div class="section-head">
-      <h2 id="area-h">Lähialue</h2>
-      <a id="situation-link" class="ext" href="https://www.tilannehuone.fi/" target="_blank" rel="noopener">Tilannehuone</a>
-    </div>
-    <div id="area" class="panel-body scroll"><p class="loading">Haetaan varoituksia ja liikennettä…</p></div>
-  </section>
-
-  <section class="panel gym" aria-labelledby="gym-h">
-    <div class="section-head">
-      <h2 id="gym-h">Ole.Fit Järvenpää</h2>
-      <span class="ext">Ohjatut tunnit</span>
-    </div>
-    <div id="gym" class="panel-body scroll"><p class="loading">Haetaan tuntiaikataulua…</p></div>
-  </section>
-
-  <section class="panel cal" aria-labelledby="cal-h">
-    <h2 id="cal-h">Kalenteri</h2>
-    <div id="cal" class="panel-body scroll"><p class="loading">Haetaan kalenteria…</p></div>
-  </section>
-
-  <section class="panel news" aria-labelledby="news-h">
-    <h2 id="news-h">Uutiset</h2>
-    <div id="news" class="panel-body scroll"><p class="loading">Haetaan uutisia…</p></div>
-  </section>
+  <main class="wrap">
+    <section id="tab-today"></section>
+    <section id="tab-sports" class="hidden"></section>
+    <section id="tab-progress" class="hidden"></section>
+    <section id="tab-calendar" class="hidden"></section>
+    <section id="tab-settings" class="hidden"></section>
+  </main>
 </div>
 
-<dialog id="cam-dialog" class="cam-dialog">
-  <form method="dialog"><button class="close">Sulje</button></form>
-  <img id="cam-dialog-img" alt="">
-  <p id="cam-dialog-cap"></p>
-</dialog>
-
-<script src="/app.js" defer></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
