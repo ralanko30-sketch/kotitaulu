@@ -7,6 +7,7 @@ import {
   HR_REF, fmtNorm, isoWeekNum, upcomingEvents,
 } from "./model.js";
 
+const APP_VERSION = "6.1 (30.10.2026)";
 const $ = (id) => document.getElementById(id);
 const ls = {
   get(k, d = null) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch { return d; } },
@@ -1030,7 +1031,7 @@ function renderSettings() {
       <pre class="raw">${esc(JSON.stringify({ tiedostot: S.raw?.fitDebug || "ei vielä tarkistettu", vo2Historia: S.raw?.vo2History || {}, kuntoika: S.raw?.fitnessAge || "ei haettu", sykeviite: HR_REF, treeni: sample, palautuminen: hs }, null, 2))}</pre>
       <p class="muted" style="margin:10px 0 0">Kun Garmin-avain vanhenee, luo uusi Garmin Connectissa, vaihda se Netlifyn GARMIN_API_KEY-muuttujaan ja julkaise sivusto uudelleen.</p>
     </details>
-    <div class="row" style="margin-top:14px"><button class="btn ghost sm" id="logoutBtn">Kirjaudu ulos</button></div>
+    <div class="row between" style="margin-top:14px"><button class="btn ghost sm" id="logoutBtn">Kirjaudu ulos</button><span class="small muted">Versio ${APP_VERSION}</span></div>
   `;
   const drawEvents = () => {
     $("evList").innerHTML = events.length ? events.map((e, i) => `<div class="evrow">
@@ -1234,5 +1235,5 @@ $("syncBtn").onclick = async () => {
 };
 setInterval(() => { if (S.raw) renderHeader(); }, 60000);
 
-if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("/sw.js").catch(() => {});
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).then(r => r.update()).catch(() => {});
 boot();
